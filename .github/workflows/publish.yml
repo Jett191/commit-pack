@@ -4,48 +4,66 @@ on:
   push:
     branches:
       - main # 仅在推送到 main 分支时触发
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. 检出代码
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # 获取完整的历史记录以支持版本管理
 
+      # 2. 设置 Node.js 环境，并启用 pnpm 缓存
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x' # 或使用 'lts/*' 获取最新的 LTS 版本
+          node-version: 'lts/*' # 使用最新的 LTS 版本，覆盖 Node.js 20 及以上
           registry-url: 'https://registry.npmjs.org/'
-          cache: 'npm' # 启用 npm 缓存
+          cache: 'pnpm' # 启用 pnpm 缓存
 
+      # 3. 安装 pnpm
+      - name: Install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      # 4. 安装依赖
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
+      # 5. 配置 Git 用户信息
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # 6. 更新版本号并创建标签
       - name: Bump version and create tag
         run: |
-          npm run release
+          pnpm run release  # 运行 standard-version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 7. 推送更改
       - name: Push changes
         run: |
           git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 8. 运行构建脚本
       - name: Run build
-        run: npm run build
+        run: pnpm run build
 
+      # 9. 发布到 npm
       - name: Publish to npm
-        run: npm publish
+        run: pnpm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
