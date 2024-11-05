@@ -12,6 +12,9 @@
     "prepublishOnly": "npm run build",
     "release": "standard-version"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "standard-version": {
     "preset": "angular",
     "commitAll": true
