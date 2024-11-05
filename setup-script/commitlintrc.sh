@@ -1,0 +1,33 @@
+echo '
+{
+  "extends": ["@commitlint/config-conventional"],
+  "parserPreset": {
+    "parserOpts": {
+      "headerPattern": "^(.+?)\\((.+?)\\): (.+)$",
+      "headerCorrespondence": ["type", "scope", "subject"]
+    }
+  },
+  "rules": {
+    "scope-empty": [2, "never"],
+    "type-enum": [
+      2,
+      "always",
+      [
+        "✨ feat",
+        "🐛 fix",
+        "🎉 init",
+        "✏️ docs",
+        "💄 style",
+        "♻️ refactor",
+        "⚡️ perf",
+        "✅ test",
+        "⏪️ revert",
+        "📦 build",
+        "🚀 chore",
+        "👷 ci"
+      ]
+    ]
+  }
+}
+
+' > .commitlintrc.json
