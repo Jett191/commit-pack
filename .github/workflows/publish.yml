@@ -26,44 +26,42 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
           cache: 'pnpm' # 启用 pnpm 缓存
 
-      # 3. 安装 pnpm
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8 # 指定 pnpm 版本，您可以根据需要调整
+      # 3. 使用 npm 全局安装 pnpm
+      - name: Install pnpm
+        run: npm install -g pnpm
 
-      # 3.1. 验证 pnpm 安装
+      # 4. 验证 pnpm 安装
       - name: Verify pnpm installation
         run: pnpm --version
 
-      # 4. 安装依赖
+      # 5. 安装依赖
       - name: Install dependencies
         run: pnpm install
 
-      # 5. 配置 Git 用户信息，以便自动提交版本更新
+      # 6. 配置 Git 用户信息
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 6. 更新版本号并创建标签
+      # 7. 更新版本号并创建标签
       - name: Bump version and create tag
         run: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 7. 推送更改（包括版本更新和标签）
+      # 8. 推送更改
       - name: Push changes
         run: |
           git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 8. 运行构建脚本
+      # 9. 运行构建脚本
       - name: Run build
         run: pnpm run build
 
-      # 9. 发布到 npm
+      # 10. 发布到 npm
       - name: Publish to npm
         run: pnpm publish
         env:
