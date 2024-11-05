@@ -5,9 +5,7 @@ on:
     branches:
       - main # 仅在推送到 main 分支时触发
     paths-ignore:
-      - 'CHANGELOG.md'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
+      - 'pnpm-lock.yaml' # 避免锁定文件的更新触发工作流
 
 jobs:
   release:
@@ -24,21 +22,25 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 'lts/*' # 使用最新的 LTS 版本，覆盖 Node.js 20 及以上
+          node-version: 'lts/*' # 使用最新的 LTS 版本
           registry-url: 'https://registry.npmjs.org/'
           cache: 'pnpm' # 启用 pnpm 缓存
 
       # 3. 安装 pnpm
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8 # 指定 pnpm 版本，您可以根据需要调整
+
+      # 3.1. 验证 pnpm 安装
+      - name: Verify pnpm installation
+        run: pnpm --version
 
       # 4. 安装依赖
       - name: Install dependencies
         run: pnpm install
 
-      # 5. 配置 Git 用户信息
+      # 5. 配置 Git 用户信息，以便自动提交版本更新
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -46,12 +48,11 @@ jobs:
 
       # 6. 更新版本号并创建标签
       - name: Bump version and create tag
-        run: |
-          pnpm run release  # 运行 standard-version
+        run: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 7. 推送更改
+      # 7. 推送更改（包括版本更新和标签）
       - name: Push changes
         run: |
           git push origin main --follow-tags
