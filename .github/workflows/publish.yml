@@ -20,7 +20,7 @@ jobs:
 
       # 2. 设置 Node.js 环境，并安装 pnpm
       - name: Setup Node.js
-        uses: actions/setup-node@v4.11.0 # 指定确切版本
+        uses: actions/setup-node@v4 # 指定确切版本
         with:
           node-version: '20.x' # 使用稳定的 Node.js 18 版本
           registry-url: 'https://registry.npmjs.org/'
