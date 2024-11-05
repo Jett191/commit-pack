@@ -18,50 +18,47 @@ jobs:
         with:
           fetch-depth: 0 # 获取完整的历史记录以支持版本管理
 
-      # 2. 设置 Node.js 环境，并启用 pnpm 缓存
+      # 2. 设置 Node.js 环境，并安装 pnpm，启用 pnpm 缓存
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 'lts/*' # 使用最新的 LTS 版本
           registry-url: 'https://registry.npmjs.org/'
           cache: 'pnpm' # 启用 pnpm 缓存
+          package-manager: 'pnpm@8' # 安装 pnpm，指定版本为 8
 
-      # 3. 使用 npm 全局安装 pnpm
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      # 4. 验证 pnpm 安装
+      # 3. 验证 pnpm 安装
       - name: Verify pnpm installation
         run: pnpm --version
 
-      # 5. 安装依赖
+      # 4. 安装依赖
       - name: Install dependencies
         run: pnpm install
 
-      # 6. 配置 Git 用户信息
+      # 5. 配置 Git 用户信息
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 7. 更新版本号并创建标签
+      # 6. 更新版本号并创建标签
       - name: Bump version and create tag
         run: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 8. 推送更改
+      # 7. 推送更改
       - name: Push changes
         run: |
           git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 9. 运行构建脚本
+      # 8. 运行构建脚本
       - name: Run build
         run: pnpm run build
 
-      # 10. 发布到 npm
+      # 9. 发布到 npm
       - name: Publish to npm
         run: pnpm publish
         env:
