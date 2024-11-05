@@ -1,5 +1,5 @@
 {
-  "name": "auto-commit",
+  "name": "commit-pack",
   "version": "1.0.0",
   "description": "A setup package to automatly check project's style and commit configuration",
   "main": "index.js",
@@ -8,7 +8,14 @@
     "lint": "eslint ./ --ext .ts,.tsx,.json --max-warnings=0",
     "format": "prettier --config .prettierrc '.' --write",
     "prepare": "husky",
-    "commit": "cz"
+    "commit": "cz",
+    "build": "babel bin/index.js --out-file lib/index.js",
+    "prepublishOnly": "npm run build",
+    "release": "standard-version"
+  },
+  "standard-version": {
+    "preset": "angular",
+    "commitAll": true
   },
   "config": {
     "commitizen": {
@@ -26,6 +33,9 @@
   "author": "jett191",
   "license": "MIT",
   "devDependencies": {
+    "@babel/cli": "^7.25.9",
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
@@ -42,6 +52,7 @@
     "inquirer": "^12.0.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
-    "shelljs": "^0.8.5"
+    "shelljs": "^0.8.5",
+    "standard-version": "^9.5.0"
   }
 }
