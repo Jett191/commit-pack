@@ -19,18 +19,14 @@ jobs:
           fetch-depth: 0
 
       # 2. 设置 Node.js 环境
-      - name: Setup Node.js
+      - name: Sync node version and setup cache
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org/'
-          cache: 'pnpm'
+          node-version: 20
 
       # 3. 安装 pnpm
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8 # 指定您需要的 pnpm 版本
+      - name: Install PNPM
+        run: npm i -g pnpm
 
       # 4. 验证 pnpm 安装
       - name: Verify pnpm installation
