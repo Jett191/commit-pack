@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      # 6. 配置 Git 用户信息
+      # 6. 配置 Git 信息
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
