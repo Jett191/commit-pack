@@ -8,8 +8,7 @@ on:
       - 'pnpm-lock.yaml'
 
 permissions:
-  contents: write # 授予对仓库内容的写权限
-
+  contents: write
 jobs:
   release:
     runs-on: ubuntu-latest
