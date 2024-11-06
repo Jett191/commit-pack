@@ -4,9 +4,14 @@ import fs from 'fs'
 import chalk from 'chalk'
 import { execSync } from 'child_process'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+// 获取 __dirname（在 ES 模块中）
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // 切换工作目录到项目根目录
-const projectRoot = path.resolve(process.cwd(), '../../')
+const projectRoot = path.resolve(__dirname, '..', '..')
 process.chdir(projectRoot)
 
 // 检测包管理器

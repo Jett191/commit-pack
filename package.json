@@ -13,6 +13,13 @@
     "prepublishOnly": "npm run build",
     "release": "standard-version"
   },
+  "bin": {
+    "commit-pack": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "setup-script/"
+  ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
