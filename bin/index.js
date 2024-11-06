@@ -3,6 +3,11 @@
 import fs from 'fs'
 import chalk from 'chalk'
 import { execSync } from 'child_process'
+import path from 'path'
+
+// 切换工作目录到项目根目录
+const projectRoot = path.resolve(process.cwd(), '../../')
+process.chdir(projectRoot)
 
 // 检测包管理器
 function detectPackageManager() {

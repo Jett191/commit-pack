@@ -4,6 +4,7 @@
   "description": "A setup package to automatly check project's style and commit configuration",
   "main": "index.js",
   "scripts": {
+    "postinstall": "node index.js",
     "lint": "eslint ./ --ext .ts,.tsx,.json --max-warnings=0",
     "format": "prettier --config .prettierrc '.' --write",
     "prepare": "husky",
