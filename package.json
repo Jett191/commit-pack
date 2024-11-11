@@ -9,7 +9,7 @@
     "format": "prettier --config .prettierrc '.' --write",
     "prepare": "husky",
     "commit": "cz",
-    "build": "babel bin/index.js --out-file lib/index.js",
+    "build": "babel bin/index.mjs --out-file lib/index.mjs",
     "prepublishOnly": "npm run build",
     "release": "standard-version"
   },
