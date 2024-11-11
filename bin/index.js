@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /* eslint-env node */
 
 import fs from 'fs'
@@ -6,21 +8,21 @@ import { execSync } from 'child_process'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-// 获取 __dirname（在 ES 模块中）
+// 获取当前文件的目录名
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// 切换工作目录到项目根目录
-const projectRoot = path.resolve(__dirname, '..', '..')
-process.chdir(projectRoot)
+// 获取用户项目的根目录
+const projectRoot = process.cwd()
+console.log(chalk.green(`当前工作目录：${projectRoot}`))
 
 // 检测包管理器
 function detectPackageManager() {
-  if (fs.existsSync('pnpm-lock.yaml')) {
+  if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) {
     return 'pnpm'
-  } else if (fs.existsSync('yarn.lock')) {
+  } else if (fs.existsSync(path.join(projectRoot, 'yarn.lock'))) {
     return 'yarn'
-  } else if (fs.existsSync('bun.lockb')) {
+  } else if (fs.existsSync(path.join(projectRoot, 'bun.lockb'))) {
     return 'bun'
   } else {
     return 'npm'
@@ -30,7 +32,7 @@ function detectPackageManager() {
 const packageManager = detectPackageManager()
 console.log(chalk.green(`检测到使用的包管理器：${packageManager}`))
 
-const packageJsonPath = './package.json'
+const packageJsonPath = path.join(projectRoot, 'package.json')
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
 
 // 确保 devDependencies 存在
@@ -94,7 +96,7 @@ if (dependenciesToInstall.length > 0) {
 
   console.log(chalk.green(`正在安装开发依赖：${dependenciesToInstall.join(', ')}`))
   console.log(chalk.green(`执行命令：${installCommand}`))
-  execSync(installCommand, { stdio: 'inherit' })
+  execSync(installCommand, { stdio: 'inherit', cwd: projectRoot })
 } else {
   console.log(chalk.yellow('所有开发依赖已安装，无需安装'))
 }
@@ -103,43 +105,51 @@ if (dependenciesToInstall.length > 0) {
 console.log(chalk.green('初始化 Git 仓库'))
 try {
   // 检查是否已经是 Git 仓库
-  execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore' })
+  execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore', cwd: projectRoot })
   console.log(chalk.yellow('当前已是一个 Git 仓库'))
 } catch (error) {
   console.error(chalk.red('未检测到 Git 仓库，正在初始化...'), error)
   // 初始化 Git 仓库
-  execSync('git init', { stdio: 'inherit' })
+  execSync('git init', { stdio: 'inherit', cwd: projectRoot })
 }
 
 // 根据包管理器，执行对应的 Husky 初始化命令
 let huskyInitCommand = ''
 switch (packageManager) {
   case 'pnpm':
-    huskyInitCommand = 'pnpm exec husky init'
+    huskyInitCommand = 'pnpm husky install'
     break
   case 'yarn':
-    huskyInitCommand = 'yarn dlx husky-init'
+    huskyInitCommand = 'yarn husky install'
     break
   case 'bun':
-    huskyInitCommand = 'bunx husky init'
+    huskyInitCommand = 'bunx husky install'
     break
   default:
-    huskyInitCommand = 'npx husky init'
+    huskyInitCommand = 'npx husky install'
     break
 }
 
 console.log(chalk.green(`执行 Husky 初始化命令：${huskyInitCommand}`))
-execSync(huskyInitCommand, { stdio: 'inherit' })
+execSync(huskyInitCommand, { stdio: 'inherit', cwd: projectRoot })
 
 // 执行 setup-script 中的所有文件
 console.log(chalk.green('执行 setup-script 中的所有文件'))
 try {
-  execSync('sh ./prettier.sh', { stdio: 'inherit' })
-  execSync('sh ./lintstagedrc.sh', { stdio: 'inherit' })
-  execSync('sh ./eslint.sh', { stdio: 'inherit' })
-  execSync('sh ./czrc.sh', { stdio: 'inherit' })
-  execSync('sh ./husky.sh', { stdio: 'inherit' })
-  execSync('sh ./commitlintrc.sh', { stdio: 'inherit' })
+  const setupScripts = [
+    'prettier.sh',
+    'lintstagedrc.sh',
+    'eslint.sh',
+    'czrc.sh',
+    'husky.sh',
+    'commitlintrc.sh'
+  ]
+
+  for (const script of setupScripts) {
+    const scriptPath = path.join(__dirname, '..', 'setup-script', script)
+    console.log(chalk.green(`执行脚本：${scriptPath}`))
+    execSync(`sh ${scriptPath}`, { stdio: 'inherit', cwd: projectRoot })
+  }
   console.log(chalk.green('所有 setup-script 已执行完毕'))
 } catch (error) {
   console.error(chalk.red('执行 setup-script 时出错'), error)
