@@ -2,9 +2,9 @@
   "name": "commit-pack",
   "version": "1.0.0",
   "description": "A setup package to automatly check project's style and commit configuration",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "postinstall": "index.js",
+    "postinstall": "node bin/index.js",
     "lint": "eslint ./ --ext .ts,.tsx,.json --max-warnings=0",
     "format": "prettier --config .prettierrc '.' --write",
     "prepare": "husky",
@@ -64,5 +64,9 @@
     "prettier": "^3.3.3",
     "shelljs": "^0.8.5",
     "standard-version": "^9.5.0"
-  }
+  },
+  "vscode_custom_css.imports": [
+    "file:///Users/jett/code/Res/custom/custom.css",
+    "file:///Users/jett/code/Res/custom/custom.js"
+  ]
 }
