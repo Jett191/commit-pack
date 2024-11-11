@@ -131,16 +131,16 @@ if (isGitRepo) {
 let huskyInitCommand = ''
 switch (packageManager) {
   case 'pnpm':
-    huskyInitCommand = 'pnpm husky install'
+    huskyInitCommand = 'pnpm exec husky init'
     break
   case 'yarn':
-    huskyInitCommand = 'yarn husky install'
+    huskyInitCommand = 'yarn dlx husky init'
     break
   case 'bun':
-    huskyInitCommand = 'bunx husky install'
+    huskyInitCommand = 'bunx husky init'
     break
   default:
-    huskyInitCommand = 'npx husky install'
+    huskyInitCommand = 'npx husky init'
     break
 }
 
