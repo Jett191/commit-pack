@@ -17,8 +17,9 @@
     "commit-pack": "./index.js"
   },
   "files": [
-    "index.js",
-    "setup-script/"
+    "bin/",
+    "setup-script/",
+    "lib/"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
