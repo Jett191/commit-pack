@@ -65,9 +65,5 @@
     "prettier": "^3.3.3",
     "shelljs": "^0.8.5",
     "standard-version": "^9.5.0"
-  },
-  "vscode_custom_css.imports": [
-    "file:///Users/jett/code/Res/custom/custom.css",
-    "file:///Users/jett/code/Res/custom/custom.js"
-  ]
+  }
 }

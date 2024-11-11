@@ -15,10 +15,10 @@ module.exports = {
     ],
 
     scopes: [
-      { name: 'components' },
-      { name: 'page' },
-      { name: 'css' },
-      { name: 'api' },
+      { name: 'index.js' },
+      { name: 'package.js' },
+      { name: 'publish' },
+      { name: 'setup-script' },
       { name: 'README.md' },
       { name: 'custom' }
     ],

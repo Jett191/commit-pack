@@ -29,6 +29,8 @@ function detectPackageManager() {
   }
 }
 
+console.log('执行 postinstall 脚本：bin/index.js')
+
 const packageManager = detectPackageManager()
 console.log(chalk.green(`检测到使用的包管理器：${packageManager}`))
 
