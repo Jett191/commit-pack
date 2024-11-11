@@ -1,4 +1,4 @@
-echo '
+cat > .commitlintrc.json << 'EOF'
 {
   "extends": ["@commitlint/config-conventional"],
   "parserPreset": {
@@ -29,5 +29,4 @@ echo '
     ]
   }
 }
-
-' > .commitlintrc.json
+EOF

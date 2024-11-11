@@ -103,15 +103,27 @@ if (dependenciesToInstall.length > 0) {
   console.log(chalk.yellow('所有开发依赖已安装，无需安装'))
 }
 
-// 初始化 Git 仓库
-console.log(chalk.green('初始化 Git 仓库'))
+let isGitRepo = false
+
 try {
-  // 检查是否已经是 Git 仓库
-  execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore', cwd: projectRoot })
+  // 获取 Git 仓库的顶级目录
+  const gitTopLevel = execSync('git rev-parse --show-toplevel', { cwd: projectRoot })
+    .toString()
+    .trim()
+  // 比较顶级目录与当前项目目录
+  if (path.resolve(gitTopLevel) === path.resolve(projectRoot)) {
+    isGitRepo = true
+  } else {
+    isGitRepo = false
+  }
+} catch {
+  isGitRepo = false
+}
+
+if (isGitRepo) {
   console.log(chalk.yellow('当前已是一个 Git 仓库'))
-} catch (error) {
-  console.error(chalk.red('未检测到 Git 仓库，正在初始化...'), error)
-  // 初始化 Git 仓库
+} else {
+  console.log(chalk.red('未检测到 Git 仓库，正在初始化...'))
   execSync('git init', { stdio: 'inherit', cwd: projectRoot })
 }
 
@@ -144,6 +156,7 @@ try {
     'eslint.sh',
     'czrc.sh',
     'husky.sh',
+    'cz-config.sh',
     'commitlintrc.sh'
   ]
 
