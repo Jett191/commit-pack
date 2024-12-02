@@ -1,6 +1,6 @@
 # auto-commit
 
-## 1. 说明
+## 1. 概述
 
 Eslint 代码质量
 
@@ -20,56 +20,44 @@ commitizen 自动化脚本生成 commit message
 
 vscode 插件
 
-## 2. 步骤
+## 2. 快速入门
 
-### 🍀 Eslint
+</br>
 
-```sh
-pnpm add -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+### 🚀 安装
+```
+pnpm add -D commit-pack@latest
+```
+```
+bun add -d commit-pack@latest
+```
+```
+npm i -D commit-pack@latest
+```
+```
+yarn add -D commit-pack@latest
+```
+</br>
+
+### 🍀 初始化
+```
+pnpm exec commit-pack-init
+```
+```
+bux commit-pack-init
+```
+```
+npx commit-pack-init
+```
+```
+yarn dlx commit-pack-init
 ```
 
-==.eslintrc==
 
-```json
-{
-  // 表示这是根配置文件，ESLint 不会在父目录中查找其他配置文件。
-  "root": true,
-  // 指定要使用的解析器，这里是 TypeScript 的解析器。
-  "parser": "@typescript-eslint/parser",
-  "extends": [
-    // 扩展 ESLint 推荐的规则。
-    "eslint:recommended",
-    // 扩展 @typescript-eslint/eslint-plugin 推荐的规则。
-    "plugin:@typescript-eslint/recommended",
-    // 扩展 @typescript-eslint/eslint-plugin 推荐的规则，禁用与 eslint:recommended 冲突的规则。
-    "plugin:@typescript-eslint/eslint-recommended"
-  ],
-  // 指定要使用的插件，这里是 @typescript-eslint 插件。
-  "plugins": ["@typescript-eslint"]
-}
-```
 
-==.eslintrcignore==
 
-```json
-node_modules/
 
-README.md
-```
-
-脚本
-
-```json
-"lint": "eslint ./ --ext .ts,.tsx,.json --max-warnings=0",
-```
-
-### 🍀 prettier
-
-```sh
-pnpm add -D prettier
-```
-
-==.prettierrc==
+**.prettierrc**
 
 ```json
 {
@@ -85,54 +73,44 @@ pnpm add -D prettier
 }
 ```
 
-==.prettierrcignore==
 
-```json
-node_modules/
 
-README.md
-```
-
-脚本
-
-```json
-"format": "prettier --config .prettierrc '.' --write"
-```
-
-### 🍀 eslint-config-prettier && eslint-plugin-prettier
-
-```sh
-pnpm add -D eslint-config-prettier eslint-plugin-prettier
-```
-
-==.eslintrc==
+**.eslintrc**
 
 ````json
 {
-  // 表示这是根配置文件，ESLint 不会在父目录中查找其他配置文件。
+  // 这是根配置文件，ESLint 不会在父目录中查找其他配置文件。
   "root": true,
+
   // 指定要使用的解析器，这里是 TypeScript 的解析器。
   "parser": "@typescript-eslint/parser",
+
   "extends": [
-    // 扩展 ESLint 推荐的规则。
+    // 扩展 ESLint 推荐的规则
     "eslint:recommended",
-    // 扩展 @typescript-eslint/eslint-plugin 推荐的规则。
+
+    // 扩展 @typescript-eslint/eslint-plugin 推荐规则
     "plugin:@typescript-eslint/recommended",
-    // 扩展 @typescript-eslint/eslint-plugin 推荐的规则，禁用与 eslint:recommended 冲突的规则。
+
+    // 扩展 @typescript-eslint/eslint-plugin 推荐的规则，禁用与 eslint:recommended 冲突的规则
     "plugin:@typescript-eslint/eslint-recommended",
-    // 扩展 Prettier 配置以禁用可能与 Prettier 冲突的 ESLint 规则。即 eslint-config-prettier 确保放在最后
+
+    // 扩展 Prettier 配置以禁用可能与 Prettier 冲突的 ESLint 规则 即 eslint-config-prettier 确保放在最后
     "prettier"
   ],
-  // 指定要使用的插件，这里是 @typescript-eslint 和 Prettier 插件。
+
   "plugins": [
     "@typescript-eslint",
     "prettier"
   ],
+
   "rules": {
     // 将 Prettier 格式化强制为 ESLint 错误。
     "prettier/prettier": "error",
+
     // 禁用强制在箭头函数体周围使用大括号的规则。
     "arrow-body-style": "off",
+
     // 禁用强制为回调使用箭头函数的规则。
     "prefer-arrow-callback": "off"
   }
@@ -140,55 +118,8 @@ pnpm add -D eslint-config-prettier eslint-plugin-prettier
 ```
 ````
 
-### 🍀 husky
 
-```sh
-pnpm add -D husky
-```
-
-```sh
-pnpm exec husky init
-```
-
-脚本
-
-```
-"prepare": "husky install"
-```
-
-==.husky/pre-commit==
-
-```
-pnpm run lint
-```
-
-### 🍀 int-staged
-
-```sh
- pnpm add -D lint-staged
-```
-
-==.lintstagedrc==
-
-```sh
-{
-  "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"]
-}
-```
-
-==更改 .husky/pre-commit==
-
-```
-npx lint-staged
-```
-
-### 🍀 commitlint
-
-```sh
- pnpm add -D @commitlint/cli @commitlint/config-conventional
-```
-
-==.commitlintrc.json==
+**.commitlintrc.json**
 
 ```json
 {
@@ -223,27 +154,7 @@ npx lint-staged
 }
 ```
 
-==.husky/commit-msg==
-
-```sh
-echo 'npx --no -- commitlint --edit "$1"' > .husky/commit-msg
-```
-
-### 🍀 commitizen
-
-```sh
-pnpm add -D commitizen@4.2.4  commitlint-config-cz  cz-customizabl  cz-custom
-```
-
-==.czrc==
-
-```json
-{
-  "path": "cz-customizable"
-}
-```
-
-==.cz-config.js==
+**.cz-config.js**
 
 ```js
 module.exports = {
@@ -286,14 +197,4 @@ module.exports = {
   allowBreakingChanges: ["✨ feat", "🐛 fix"],
   subjectLimit: 49,
 };
-```
-
-==package.json==
-
-```json
-  "config": {
-    "commitizen": {
-      "path": "node_modules/cz-customizable"
-    }
-  },
 ```
