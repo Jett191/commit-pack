@@ -37,6 +37,13 @@ console.log(chalk.green(`检测到使用的包管理器：${packageManager}`))
 const packageJsonPath = path.join(projectRoot, 'package.json')
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
 
+// 检查是否已经初始化过
+const initFlagPath = path.join(projectRoot, '.commit-pack-init')
+if (fs.existsSync(initFlagPath)) {
+  console.log(chalk.yellow('已检测到初始化标志文件，跳过初始化'))
+  process.exit(0)
+}
+
 // 确保 devDependencies 存在
 if (!packageJson.devDependencies) {
   packageJson.devDependencies = {}
@@ -214,3 +221,7 @@ if (modified) {
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
   console.log(chalk.green('已更新 package.json'))
 }
+
+// 创建初始化标志文件
+fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
+console.log(chalk.green('已创建初始化标志文件'))
