@@ -57,20 +57,6 @@
     "cz-custom": "^0.0.2",
     "cz-customizable": "^7.2.1"
   },
-  "bundledDependencies": [
-    "@typescript-eslint/parser",
-    "@typescript-eslint/eslint-plugin",
-    "prettier",
-    "eslint-config-prettier",
-    "eslint-plugin-prettier",
-    "husky",
-    "lint-staged",
-    "@commitlint/cli",
-    "@commitlint/config-conventional",
-    "commitlint-config-cz",
-    "cz-customizable",
-    "cz-custom"
-  ],
   "devDependencies": {
     "@babel/cli": "^7.25.9",
     "@babel/core": "^7.26.0",
