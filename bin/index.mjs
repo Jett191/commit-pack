@@ -59,71 +59,71 @@ if (fs.existsSync(initFlagPath)) {
   process.exit(0)
 }
 
-// 确保 devDependencies 存在
-if (!packageJson.devDependencies) {
-  packageJson.devDependencies = {}
-}
+// // 确保 devDependencies 存在
+// if (!packageJson.devDependencies) {
+//   packageJson.devDependencies = {}
+// }
 
-const devDependenciesWithVersion = {
-  commitizen: '4.2.4',
-  eslint: '8.57.1'
-}
+// const devDependenciesWithVersion = {
+//   commitizen: '4.2.4',
+//   eslint: '8.57.1'
+// }
 
-const devDependencies = [
-  '@typescript-eslint/parser',
-  '@typescript-eslint/eslint-plugin',
-  'prettier',
-  'eslint-config-prettier',
-  'eslint-plugin-prettier',
-  'husky',
-  'lint-staged',
-  '@commitlint/cli',
-  '@commitlint/config-conventional',
-  'commitlint-config-cz',
-  'cz-customizable',
-  'cz-custom'
-]
+// const devDependencies = [
+//   '@typescript-eslint/parser',
+//   '@typescript-eslint/eslint-plugin',
+//   'prettier',
+//   'eslint-config-prettier',
+//   'eslint-plugin-prettier',
+//   'husky',
+//   'lint-staged',
+//   '@commitlint/cli',
+//   '@commitlint/config-conventional',
+//   'commitlint-config-cz',
+//   'cz-customizable',
+//   'cz-custom'
+// ]
 
-let dependenciesToInstall = []
+// let dependenciesToInstall = []
 
-// 检查并收集需要安装的依赖
-for (const dep of devDependencies) {
-  if (!packageJson.devDependencies[dep]) {
-    dependenciesToInstall.push(dep)
-  }
-}
+// // 检查并收集需要安装的依赖
+// for (const dep of devDependencies) {
+//   if (!packageJson.devDependencies[dep]) {
+//     dependenciesToInstall.push(dep)
+//   }
+// }
 
-for (const [dep, version] of Object.entries(devDependenciesWithVersion)) {
-  if (!packageJson.devDependencies[dep]) {
-    dependenciesToInstall.push(`${dep}@${version}`)
-  }
-}
+// for (const [dep, version] of Object.entries(devDependenciesWithVersion)) {
+//   if (!packageJson.devDependencies[dep]) {
+//     dependenciesToInstall.push(`${dep}@${version}`)
+//   }
+// }
 
-// 安装缺失的依赖
-if (dependenciesToInstall.length > 0) {
-  let installCommand = ''
+// // 安装缺失的依赖
+// if (dependenciesToInstall.length > 0) {
+//   let installCommand = ''
 
-  switch (packageManager) {
-    case 'pnpm':
-      installCommand = `pnpm add -D ${dependenciesToInstall.join(' ')}`
-      break
-    case 'yarn':
-      installCommand = `yarn add ${dependenciesToInstall.join(' ')} --dev`
-      break
-    case 'bun':
-      installCommand = `bun add -d ${dependenciesToInstall.join(' ')}`
-      break
-    default:
-      installCommand = `npm install ${dependenciesToInstall.join(' ')} --save-dev`
-      break
-  }
+//   switch (packageManager) {
+//     case 'pnpm':
+//       installCommand = `pnpm add -D ${dependenciesToInstall.join(' ')}`
+//       break
+//     case 'yarn':
+//       installCommand = `yarn add ${dependenciesToInstall.join(' ')} --dev`
+//       break
+//     case 'bun':
+//       installCommand = `bun add -d ${dependenciesToInstall.join(' ')}`
+//       break
+//     default:
+//       installCommand = `npm install ${dependenciesToInstall.join(' ')} --save-dev`
+//       break
+//   }
 
-  console.log(chalk.green(`正在安装开发依赖：${dependenciesToInstall.join(', ')}`))
-  console.log(chalk.green(`执行命令：${installCommand}`))
-  execSync(installCommand, { stdio: 'inherit', cwd: projectRoot })
-} else {
-  console.log(chalk.yellow('所有开发依赖已安装，无需安装'))
-}
+//   console.log(chalk.green(`正在安装开发依赖：${dependenciesToInstall.join(', ')}`))
+//   console.log(chalk.green(`执行命令：${installCommand}`))
+//   execSync(installCommand, { stdio: 'inherit', cwd: projectRoot })
+// } else {
+//   console.log(chalk.yellow('所有开发依赖已安装，无需安装'))
+// }
 
 let isGitRepo = false
 
