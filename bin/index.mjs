@@ -37,7 +37,7 @@ function detectPackageManager() {
     return 'pnpm'
   } else if (fs.existsSync(path.join(projectRoot, 'yarn.lock'))) {
     return 'yarn'
-  } else if (fs.existsSync(path.join(projectRoot, 'bun.lockb'))) {
+  } else if (fs.existsSync(path.join(projectRoot, 'bun.lock'))) {
     return 'bun'
   } else {
     return 'npm'
