@@ -6,15 +6,25 @@ import fs from 'fs'
 import chalk from 'chalk'
 import { execSync } from 'child_process'
 import path from 'path'
-import { fileURLToPath } from 'url'
 
-// 获取当前文件的目录名
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+function findProjectRootWithLockFile() {
+  let dir = __dirname
+  const lockFiles = ['bun.lockb', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json']
 
-// 获取用户项目的根目录
-const projectRoot = process.cwd()
-console.log(chalk.green(`当前工作目录：${projectRoot}`))
+  while (dir !== path.dirname(dir)) {
+    for (const file of lockFiles) {
+      if (fs.existsSync(path.join(dir, file))) {
+        return dir
+      }
+    }
+    dir = path.dirname(dir)
+  }
+
+  return process.cwd() // fallback
+}
+
+const projectRoot = findProjectRootWithLockFile()
+console.log(chalk.green(`检测到项目根目录：${projectRoot}`))
 
 // 检测包管理器
 function detectPackageManager() {
@@ -29,7 +39,7 @@ function detectPackageManager() {
   }
 }
 
-console.log('执行 postinstall 脚本：bin/index.js')
+console.log('执行 postinstall 脚本:bin/index.js')
 
 const packageManager = detectPackageManager()
 console.log(chalk.green(`检测到使用的包管理器：${packageManager}`))
