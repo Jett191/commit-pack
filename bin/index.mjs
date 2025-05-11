@@ -6,7 +6,13 @@ import fs from 'fs'
 import chalk from 'chalk'
 import { execSync } from 'child_process'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
+// 模拟 CommonJS 的 __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// 向上查找带锁文件的根目录
 function findProjectRootWithLockFile() {
   let dir = __dirname
   const lockFiles = ['bun.lockb', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json']
@@ -26,7 +32,6 @@ function findProjectRootWithLockFile() {
 const projectRoot = findProjectRootWithLockFile()
 console.log(chalk.green(`检测到项目根目录：${projectRoot}`))
 
-// 检测包管理器
 function detectPackageManager() {
   if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) {
     return 'pnpm'
