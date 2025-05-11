@@ -44,7 +44,7 @@ yarn add -D commit-pack@latest
 pnpm exec commit-pack-init
 ```
 ```
-bux commit-pack-init
+bunx commit-pack-init
 ```
 ```
 npx commit-pack-init
