@@ -44,18 +44,19 @@
   "author": "jett191",
   "license": "MIT",
   "dependencies": {
-    "@typescript-eslint/parser": "^8.12.2",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
-    "prettier": "^3.3.3",
+    "@typescript-eslint/parser": "^8.12.2",
+    "cli-progress": "^3.12.0",
+    "commitlint-config-cz": "^0.13.3",
+    "cz-custom": "^0.0.2",
+    "cz-customizable": "^7.2.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
-    "@commitlint/cli": "^19.5.0",
-    "@commitlint/config-conventional": "^19.5.0",
-    "commitlint-config-cz": "^0.13.3",
-    "cz-custom": "^0.0.2",
-    "cz-customizable": "^7.2.1"
+    "prettier": "^3.3.3"
   },
   "devDependencies": {
     "@babel/cli": "^7.25.9",

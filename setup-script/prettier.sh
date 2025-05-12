@@ -7,7 +7,8 @@ echo '
   "semi": false,
   "tabWidth": 2,
   "bracketSpacing": true,
-  "trailingComma": "none"
+  "trailingComma": "none",
+  "plugins": ["prettier-plugin-tailwindcss"]
 }
 ' > .prettierrc
 
