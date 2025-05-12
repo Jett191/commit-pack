@@ -79,23 +79,12 @@ yarn dlx commit-pack-init
 
 ````json
 {
-  // 这是根配置文件，ESLint 不会在父目录中查找其他配置文件。
   "root": true,
-
-  // 指定要使用的解析器，这里是 TypeScript 的解析器。
   "parser": "@typescript-eslint/parser",
-
   "extends": [
-    // 扩展 ESLint 推荐的规则
     "eslint:recommended",
-
-    // 扩展 @typescript-eslint/eslint-plugin 推荐规则
     "plugin:@typescript-eslint/recommended",
-
-    // 扩展 @typescript-eslint/eslint-plugin 推荐的规则，禁用与 eslint:recommended 冲突的规则
     "plugin:@typescript-eslint/eslint-recommended",
-
-    // 扩展 Prettier 配置以禁用可能与 Prettier 冲突的 ESLint 规则 即 eslint-config-prettier 确保放在最后
     "prettier"
   ],
 
@@ -105,13 +94,8 @@ yarn dlx commit-pack-init
   ],
 
   "rules": {
-    // 将 Prettier 格式化强制为 ESLint 错误。
     "prettier/prettier": "error",
-
-    // 禁用强制在箭头函数体周围使用大括号的规则。
     "arrow-body-style": "off",
-
-    // 禁用强制为回调使用箭头函数的规则。
     "prefer-arrow-callback": "off"
   }
 }

@@ -10,6 +10,16 @@ import { fileURLToPath } from 'url'
 import { log } from './chalkColor.js'
 import { installWithProgress } from './installWithProgress.js'
 
+const printBanner = () => {
+  const top = '╭' + '─'.repeat(40) + '╮'
+  const bottom = '╰' + '─'.repeat(40) + '╯'
+  const middle = `│  ${chalk.bold.cyan('🚀 Commit Pack 初始化中...')}  │`
+
+  console.log('\n' + top)
+  console.log(middle)
+  console.log(bottom + '\n')
+}
+
 // 模拟 CommonJS 的 __dirname
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -46,6 +56,9 @@ function detectPackageManager() {
 }
 
 const packageManager = detectPackageManager()
+console.log('')
+printBanner()
+console.log('')
 console.log('')
 console.log(`🍀 包管理器:${packageManager}`)
 console.log(`📁 根目录:${projectRoot}`)
@@ -177,23 +190,23 @@ let modified = false
 
 if (!packageJson.scripts.lint) {
   packageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
-  console.log(log.success('已添加 "lint" 至 package.json'))
+  console.log(log.success('✅ 已添加 "lint" 至 package.json'))
   modified = true
 } else {
-  console.log(log.warn('package.json 中已存在 "lint" 未作修改'))
+  console.log(log.warn('⚠️ package.json 中已存在 "lint" 未作修改'))
 }
 
 if (!packageJson.scripts.format) {
   packageJson.scripts.format = "prettier --config .prettierrc '.' --write"
-  console.log(log.success('已添加 "format" 至 package.json'))
+  console.log(log.success('✅ 已添加 "format" 至 package.json'))
   modified = true
 } else {
-  console.log(log.warn('package.json 中已存在 "format" 未作修改'))
+  console.log(log.warn('⚠️ package.json 中已存在 "format" 未作修改'))
 }
 
 // 添加或更新 "commit" 脚本
 packageJson.scripts.commit = 'cz'
-console.log(log.success('已添加或更新 "commit" 脚本到 package.json'))
+console.log(log.success('✅ 已添加 "commit" 至 package.json'))
 modified = true
 
 // 添加或更新 "config.commitizen" 配置
@@ -209,7 +222,7 @@ modified = true
 // 写入修改后的 package.json
 if (modified) {
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
-  console.log(chalk.green('已更新 package.json'))
+  console.log(chalk.green('✅ 已更新 package.json'))
   console.log('')
   console.log('')
 }
