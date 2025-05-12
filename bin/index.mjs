@@ -163,7 +163,6 @@ try {
     const scriptPath = path.join(__dirname, '..', 'setup-script', script)
     execSync(`sh ${scriptPath}`, { stdio: 'inherit', cwd: projectRoot })
   }
-  console.log(chalk.green('✅ 文件创建完毕'))
 } catch (error) {
   console.error(log.warn('❌ 文件创建出错'), error)
 }
@@ -171,6 +170,7 @@ try {
 // 创建或更新脚本
 if (!packageJson.scripts) {
   packageJson.scripts = {}
+  console.log('🔥 创建或更新脚本...')
 }
 
 let modified = false
@@ -216,6 +216,6 @@ if (modified) {
 
 // 创建初始化标志文件
 // fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
-console.log(log.success('🎉🎉🎉 完成啦!'))
+console.log(log.success('   🎉🎉🎉 完成啦!'))
 console.log('')
-console.log('运行 git add 后 | 运行 ${packageManager} run commit 即可')
+console.log(`   运行 git add 后 | 运行 ${packageManager} run commit 即可`)
