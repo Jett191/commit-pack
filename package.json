@@ -1,6 +1,6 @@
 {
   "name": "commit-pack",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "A setup package to automatly check project's style and commit configuration",
   "main": "lib/index.js",
   "scripts": {
