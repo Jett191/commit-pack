@@ -7,6 +7,8 @@ import chalk from 'chalk'
 import { execSync } from 'child_process'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { log } from './chalkColor'
+import { installWithProgress } from './installWithProgress'
 
 // 模拟 CommonJS 的 __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -30,7 +32,7 @@ function findProjectRootWithLockFile() {
 }
 
 const projectRoot = findProjectRootWithLockFile()
-console.log(chalk.green(`检测到项目根目录：${projectRoot}`))
+console.log(`📁 根目录:${projectRoot}`)
 
 function detectPackageManager() {
   if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) {
@@ -44,10 +46,8 @@ function detectPackageManager() {
   }
 }
 
-console.log('执行 postinstall 脚本:bin/index.js')
-
 const packageManager = detectPackageManager()
-console.log(chalk.green(`检测到使用的包管理器：${packageManager}`))
+console.log(`🍀 包管理器:${packageManager}`)
 
 const packageJsonPath = path.join(projectRoot, 'package.json')
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
@@ -55,7 +55,6 @@ const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
 // 检查是否已经初始化过
 const initFlagPath = path.join(projectRoot, '.commit-pack-init')
 if (fs.existsSync(initFlagPath)) {
-  console.log(chalk.yellow('已检测到初始化标志文件，跳过初始化'))
   process.exit(0)
 }
 
@@ -81,7 +80,8 @@ const devDependencies = [
   '@commitlint/config-conventional',
   'commitlint-config-cz',
   'cz-customizable',
-  'cz-custom'
+  'cz-custom',
+  'prettier-plugin-tailwindcss'
 ]
 
 let dependenciesToInstall = []
@@ -99,31 +99,31 @@ for (const [dep, version] of Object.entries(devDependenciesWithVersion)) {
   }
 }
 
-// 安装缺失的依赖
-if (dependenciesToInstall.length > 0) {
-  let installCommand = ''
+installWithProgress(dependenciesToInstall, packageManager, projectRoot)
+// // 安装缺失的依赖
+// if (dependenciesToInstall.length > 0) {
+//   let installCommand = ''
 
-  switch (packageManager) {
-    case 'pnpm':
-      installCommand = `pnpm add -D ${dependenciesToInstall.join(' ')}`
-      break
-    case 'yarn':
-      installCommand = `yarn add ${dependenciesToInstall.join(' ')} --dev`
-      break
-    case 'bun':
-      installCommand = `bun add -d ${dependenciesToInstall.join(' ')}`
-      break
-    default:
-      installCommand = `npm install ${dependenciesToInstall.join(' ')} --save-dev`
-      break
-  }
+//   switch (packageManager) {
+//     case 'pnpm':
+//       installCommand = `pnpm add -D ${dependenciesToInstall.join(' ')}`
+//       break
+//     case 'yarn':
+//       installCommand = `yarn add ${dependenciesToInstall.join(' ')} --dev`
+//       break
+//     case 'bun':
+//       installCommand = `bun add -d ${dependenciesToInstall.join(' ')}`
+//       break
+//     default:
+//       installCommand = `npm install ${dependenciesToInstall.join(' ')} --save-dev`
+//       break
+//   }
 
-  console.log(chalk.green(`正在安装开发依赖：${dependenciesToInstall.join(', ')}`))
-  console.log(chalk.green(`执行命令：${installCommand}`))
-  execSync(installCommand, { stdio: 'inherit', cwd: projectRoot })
-} else {
-  console.log(chalk.yellow('所有开发依赖已安装，无需安装'))
-}
+//   console.log(chalk.green(`⬇️ 安装依赖:${dependenciesToInstall.join(', ')}`))
+//   execSync(installCommand, { stdio: 'inherit', cwd: projectRoot })
+// } else {
+//   console.log(log.warn('已安装 跳过...'))
+// }
 
 let isGitRepo = false
 
@@ -143,9 +143,9 @@ try {
 }
 
 if (isGitRepo) {
-  console.log(chalk.yellow('当前已是一个 Git 仓库'))
+  console.log(log.success('👍 已初始化Git'))
 } else {
-  console.log(chalk.red('未检测到 Git 仓库，正在初始化...'))
+  console.log(log.warn('👌 未检测到 Git 仓库，正在初始化...'))
   execSync('git init', { stdio: 'inherit', cwd: projectRoot })
 }
 
@@ -166,7 +166,7 @@ switch (packageManager) {
     break
 }
 
-console.log(chalk.green(`执行 Husky 初始化命令：${huskyInitCommand}`))
+console.log(chalk.green(`🐶 Husky初始化`))
 execSync(huskyInitCommand, { stdio: 'inherit', cwd: projectRoot })
 
 // 执行 setup-script 中的所有文件
@@ -184,7 +184,7 @@ try {
 
   for (const script of setupScripts) {
     const scriptPath = path.join(__dirname, '..', 'setup-script', script)
-    console.log(chalk.green(`执行脚本：${scriptPath}`))
+    console.log(chalk.green(`🚀 执行脚本`))
     execSync(`sh ${scriptPath}`, { stdio: 'inherit', cwd: projectRoot })
   }
   console.log(chalk.green('所有 setup-script 已执行完毕'))
