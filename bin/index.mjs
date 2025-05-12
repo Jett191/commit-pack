@@ -7,8 +7,8 @@ import chalk from 'chalk'
 import { execSync } from 'child_process'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { log } from './chalkColor'
-import { installWithProgress } from './installWithProgress'
+import { log } from './chalkColor.js'
+import { installWithProgress } from './installWithProgress.js'
 
 // 模拟 CommonJS 的 __dirname
 const __filename = fileURLToPath(import.meta.url)
