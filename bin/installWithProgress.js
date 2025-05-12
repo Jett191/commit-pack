@@ -9,7 +9,8 @@ export function installWithProgress(dependencies, packageManager, projectRoot) {
     return
   }
 
-  console.log(chalk.cyan(`⬇️ 开始安装 ${dependencies.length} 个开发依赖...`))
+  console.log('')
+  console.log(chalk.cyan(`⬇️ 开始安装依赖...`))
 
   const bar = new cliProgress.SingleBar({
     format: `${chalk.green('📦 安装中')} {bar} {percentage}% | {value}/{total} | 正在安装: {dep}`,
@@ -39,7 +40,10 @@ export function installWithProgress(dependencies, packageManager, projectRoot) {
     }
 
     bar.stop()
+    console.log('')
     console.log(chalk.green('✅ 所有开发依赖安装完成'))
+    console.log('')
+    console.log('')
   } catch (err) {
     bar.stop()
     console.log(chalk.red('❌ 安装过程中出错'), err)

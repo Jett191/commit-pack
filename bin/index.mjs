@@ -32,7 +32,6 @@ function findProjectRootWithLockFile() {
 }
 
 const projectRoot = findProjectRootWithLockFile()
-console.log(`📁 根目录:${projectRoot}`)
 
 function detectPackageManager() {
   if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) {
@@ -47,7 +46,9 @@ function detectPackageManager() {
 }
 
 const packageManager = detectPackageManager()
+console.log('')
 console.log(`🍀 包管理器:${packageManager}`)
+console.log(`📁 根目录:${projectRoot}`)
 
 const packageJsonPath = path.join(projectRoot, 'package.json')
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
@@ -100,30 +101,6 @@ for (const [dep, version] of Object.entries(devDependenciesWithVersion)) {
 }
 
 installWithProgress(dependenciesToInstall, packageManager, projectRoot)
-// // 安装缺失的依赖
-// if (dependenciesToInstall.length > 0) {
-//   let installCommand = ''
-
-//   switch (packageManager) {
-//     case 'pnpm':
-//       installCommand = `pnpm add -D ${dependenciesToInstall.join(' ')}`
-//       break
-//     case 'yarn':
-//       installCommand = `yarn add ${dependenciesToInstall.join(' ')} --dev`
-//       break
-//     case 'bun':
-//       installCommand = `bun add -d ${dependenciesToInstall.join(' ')}`
-//       break
-//     default:
-//       installCommand = `npm install ${dependenciesToInstall.join(' ')} --save-dev`
-//       break
-//   }
-
-//   console.log(chalk.green(`⬇️ 安装依赖:${dependenciesToInstall.join(', ')}`))
-//   execSync(installCommand, { stdio: 'inherit', cwd: projectRoot })
-// } else {
-//   console.log(log.warn('已安装 跳过...'))
-// }
 
 let isGitRepo = false
 
@@ -143,9 +120,9 @@ try {
 }
 
 if (isGitRepo) {
-  console.log(log.success('👍 已初始化Git'))
+  console.log(log.success('👍 Git仓库已存在'))
 } else {
-  console.log(log.warn('👌 未检测到 Git 仓库，正在初始化...'))
+  console.log(log.warn('👌 Git仓库初始化...'))
   execSync('git init', { stdio: 'inherit', cwd: projectRoot })
 }
 
@@ -166,11 +143,11 @@ switch (packageManager) {
     break
 }
 
-console.log(chalk.green(`🐶 Husky初始化`))
+console.log(chalk.green(`🐶 Husky初始化...`))
 execSync(huskyInitCommand, { stdio: 'inherit', cwd: projectRoot })
 
 // 执行 setup-script 中的所有文件
-console.log(chalk.green('执行 setup-script 中的所有文件'))
+console.log('🚀 创建配置文件...')
 try {
   const setupScripts = [
     'prettier.sh',
@@ -184,12 +161,11 @@ try {
 
   for (const script of setupScripts) {
     const scriptPath = path.join(__dirname, '..', 'setup-script', script)
-    console.log(chalk.green(`🚀 执行脚本`))
     execSync(`sh ${scriptPath}`, { stdio: 'inherit', cwd: projectRoot })
   }
-  console.log(chalk.green('所有 setup-script 已执行完毕'))
+  console.log(chalk.green('✅ 文件创建完毕'))
 } catch (error) {
-  console.error(chalk.red('执行 setup-script 时出错'), error)
+  console.error(log.warn('❌ 文件创建出错'), error)
 }
 
 // 创建或更新脚本
@@ -201,23 +177,23 @@ let modified = false
 
 if (!packageJson.scripts.lint) {
   packageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
-  console.log(chalk.green('已添加 "lint" 脚本到 package.json'))
+  console.log(log.success('已添加 "lint" 至 package.json'))
   modified = true
 } else {
-  console.log(chalk.yellow('package.json 中已存在 "lint" 脚本，未作修改'))
+  console.log(log.warn('package.json 中已存在 "lint" 未作修改'))
 }
 
 if (!packageJson.scripts.format) {
   packageJson.scripts.format = "prettier --config .prettierrc '.' --write"
-  console.log(chalk.green('已添加 "format" 脚本到 package.json'))
+  console.log(log.success('已添加 "format" 至 package.json'))
   modified = true
 } else {
-  console.log(chalk.yellow('package.json 中已存在 "format" 脚本，未作修改'))
+  console.log(log.warn('package.json 中已存在 "format" 未作修改'))
 }
 
 // 添加或更新 "commit" 脚本
 packageJson.scripts.commit = 'cz'
-console.log(chalk.green('已添加或更新 "commit" 脚本到 package.json'))
+console.log(log.success('已添加或更新 "commit" 脚本到 package.json'))
 modified = true
 
 // 添加或更新 "config.commitizen" 配置
@@ -228,15 +204,18 @@ if (!packageJson.config) {
 packageJson.config.commitizen = {
   path: 'node_modules/cz-customizable'
 }
-console.log(chalk.green('已添加或更新 "config.commitizen" 到 package.json'))
 modified = true
 
 // 写入修改后的 package.json
 if (modified) {
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
   console.log(chalk.green('已更新 package.json'))
+  console.log('')
+  console.log('')
 }
 
 // 创建初始化标志文件
-fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
-console.log(chalk.green('已创建初始化标志文件'))
+// fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
+console.log(log.success('🎉🎉🎉 完成啦!'))
+console.log('')
+console.log('运行 git add 后 | 运行 ${packageManager} run commit 即可')
