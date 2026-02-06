@@ -56,6 +56,11 @@ jobs:
         run: |
           git remote set-url origin https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
+      - name: Sync with remote main
+        run: |
+          git fetch origin
+          git rebase origin/main
+
       # 9. 推送更改
       - name: Push changes
         run: |
