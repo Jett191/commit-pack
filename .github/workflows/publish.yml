@@ -46,9 +46,10 @@ jobs:
 
       # 7. 更新版本号并创建标签
       - name: Bump version and create tag
-        run: pnpm run release
+        run: HUSKY=0 pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: 0
 
       # 8. 配置 Git 身份验证
       - name: 配置 Git 身份验证
