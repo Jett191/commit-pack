@@ -11,7 +11,7 @@
     "commit": "cz",
     "build": "babel bin/index.mjs --out-file lib/index.mjs",
     "prepublishOnly": "npm run build",
-    "release": "standard-version"
+    "release": "HUSKY=0 standard-version"
   },
   "bin": {
     "commit-pack-init": "bin/index.mjs"
