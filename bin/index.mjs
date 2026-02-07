@@ -360,12 +360,18 @@ try {
   fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
   console.log(log.success('   🎉🎉🎉 完成啦!'))
   console.log('')
+  console.log('')
+  console.log(
+    '   📦 欢迎在仓库中反馈问题或参与改进   https://github.com/Jett191/commit-pack'
+  )
+  console.log('')
+  console.log('')
   if (workspaceName) {
     console.log(
       `   在 ${workspaceName} 工作空间中，运行: git add . && ${packageManager} run commit`
     )
   } else {
-    console.log(`   运行 git add 后 | 运行 ${packageManager} run commit 即可`)
+    console.log(`   运行 git add  后 | 运行 ${packageManager} run commit 即可`)
   }
 } catch (error) {
   console.error(log.error('❌ 初始化过程中发生错误，正在执行回滚...'))

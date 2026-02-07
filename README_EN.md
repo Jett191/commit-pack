@@ -1,6 +1,6 @@
 <div align="right">
 
-[Chinese](./README.md)
+[中文](https://github.com/Jett191/commit-pack/)
 
 </div>
 
