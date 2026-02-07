@@ -3,6 +3,7 @@
 [Chinese](./README.md)
 
 </div>
+
 # commit-pack
 
 Automated project setup for code quality and commit standardization. Integrates ESLint, Prettier, Husky, lint-staged, commitlint, and commitizen to enforce consistent code style and standardized commit messages.
