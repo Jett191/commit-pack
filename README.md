@@ -1,6 +1,6 @@
 # commit-pack
 
-自动化的项目代码质量和提交标准化设置。集成 ESLint、Prettier、Husky、lint-staged、commitlint 和 commitizen，强制执行一致的代码风格和标准化的提交消息。
+自动化的项目代码质量和提交标准化设置。集成 ESLint、Prettier、Husky、lint-staged、commitlint 和 commitizen，执行代码风格检查和标准化提交消息。
 
 ## ✨ 特性
 
@@ -13,6 +13,16 @@
 - **多包管理器**: 支持 pnpm、npm、yarn 和 bun
 - **支持 Monorepo**: 使用 `-w` 标志处理基于工作区的项目
 - **安全回滚**: 初始化失败时自动回滚
+
+## 🎬 Demo
+
+<p align="center">
+  <video src="https://img.jett191.site/video/commitpack.mp4"
+         controls
+         muted
+         width="800">
+  </video>
+</p>
 
 ## 🚀 快速开始
 
@@ -229,253 +239,27 @@ module.exports = {
 6. 推送到分支 (`git push origin feature/amazing-feature`)
 7. 创建 Pull Request
 
+
+
+
+## 致谢
+> 本项目以工程整合与工作流设计为核心，
+> 基于一组成熟且优秀的开源工具，
+> 构建了一个更易用、更一致的开发者工具链。
+>
+> 本项目并未引入新的底层技术，
+> 其价值主要体现在整合方案、默认配置与开发体验优化上。
+>
+> 相关核心能力均来自对应开源项目，特此致谢其作者与维护者。
+- [ESLint](https://eslint.org/) —— 可配置、可扩展的 JavaScript 代码检查工具
+- [Prettier](https://prettier.io/) —— 具有统一风格约定的代码格式化工具
+- [Husky](https://typicode.github.io/husky/) —— 简化 Git Hooks 配置与使用的工具
+- [lint-staged](https://github.com/okonet/lint-staged) —— 仅对暂存区文件运行代码检查
+- [commitlint](https://commitlint.js.org/) —— 用于校验提交信息规范的工具
+- [commitizen](https://github.com/commitizen/cz-cli) —— 交互式生成提交信息的工具
+- [TypeScript](https://www.typescriptlang.org/) —— 面向大型应用的强类型 JavaScript
+
+
 ## ©️ 许可证
 
 此项目根据 MIT 许可证授权 - 详见 [LICENSE](LICENSE) 文件。
-
----
-
-# commit-pack
-
-Automated project setup for code quality and commit standardization. Integrates ESLint, Prettier, Husky, lint-staged, commitlint, and commitizen to enforce consistent code style and standardized commit messages.
-
-## ✨ Features
-
-- **Code Quality**: Integrates ESLint with TypeScript parser and recommended configs
-- **Code Formatting**: Prettier with opinionated formatting rules
-- **Git Hooks**: Husky-powered pre-commit and commit-message validation
-- **Staged Files**: lint-staged runs checks only on staged files
-- **Commit Validation**: commitlint ensures conventional commit format
-- **Interactive Commits**: commitizen provides guided commit creation
-- **Multi-Package Manager**: Supports pnpm, npm, yarn, and bun
-- **Monorepo Ready**: Handles workspace-based projects with `-w` flag
-- **Rollback Safe**: Automatic rollback if initialization fails
-
-## 🚀 Quick Start
-
-### Installation
-```bash
-# Using pnpm
-pnpm add -D commit-pack@latest
-```
-
-```bash
-# Using bun
-bun add -d commit-pack@latest
-```
-
-```bash
-# Using npm
-npm install -D commit-pack@latest
-```
-
-```bash
-# Using yarn
-yarn add -D commit-pack@latest
-```
-
-### Initialization
-```bash
-# Initialize in the root of your project
-pnpm exec commit-pack-init
-```
-
-```bash
-# Using bun
-bunx commit-pack-init
-```
-
-```bash
-# Using npx
-npx commit-pack-init
-```
-
-```bash
-# Using yarn
-yarn dlx commit-pack-init
-```
-
-### Monorepo Support
-```bash
-# Initialize for a specific workspace in monorepo
-pnpm exec commit-pack-init -w workspace-name
-# or
-pnpm exec commit-pack-init --workspace=workspace-name
-```
-
-## 🛠️ What's Included
-
-### ESLint Configuration
-- TypeScript support with `@typescript-eslint/parser`
-- Recommended TypeScript rules
-- Integration with Prettier to avoid conflicts
-- Root configuration to work in monorepos
-
-**.eslintrc**
-```json
-{
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "prettier"
-  ],
-
-  "plugins": [
-    "@typescript-eslint",
-    "prettier"
-  ],
-
-  "rules": {
-    "prettier/prettier": "error",
-    "arrow-body-style": "off",
-    "prefer-arrow-callback": "off"
-  }
-}
-```
-
-### Prettier Configuration
-- Single quotes for strings
-- Print width of 100 characters
-- No semicolons
-- Tailwind CSS plugin support
-- Consistent spacing and formatting
-
-**.prettierrc**
-```json
-{
-  "singleQuote": true,
-  "printWidth": 100,
-  "jsxSingleQuote": true,
-  "bracketSameLine": true,
-  "semi": false,
-  "plugins": ["prettier-plugin-tailwindcss"],
-  "tabWidth": 2,
-  "bracketSpacing": true,
-  "trailingComma": "none"
-}
-```
-
-### Commitlint Configuration
-- Enforces conventional commit format
-- Custom emoji-prefixed commit types
-- Scope validation
-- Detailed commit message structure
-
-**.commitlintrc.json**
-```json
-{
-  "extends": ["@commitlint/config-conventional"],
-  "parserPreset": {
-    "parserOpts": {
-      "headerPattern": "^(.+?)\\((.+?)\\): (.+)$",
-      "headerCorrespondence": ["type", "scope", "subject"]
-    }
-  },
-  "rules": {
-    "scope-empty": [2, "never"],
-    "type-enum": [
-      2,
-      "always",
-      [
-        "✨ feat",
-        "🐛 fix",
-        "🎉 init",
-        "✏️ docs",
-        "💄 style",
-        "♻️ refactor",
-        "⚡️ perf",
-        "✅ test",
-        "⏪️ revert",
-        "📦 build",
-        "🚀 chore",
-        "👷 ci"
-      ]
-    ]
-  }
-}
-```
-
-### Commitizen Configuration
-- Interactive commit interface
-- Predefined commit types with emojis
-- Customizable scopes
-- Guided commit message creation
-
-**.cz-config.js**
-```js
-module.exports = {
-  types: [
-    { value: "✨ feat", name: "  ✨  feat: 新功能" },
-    { value: "🐛 fix", name: "  🐛 fix: 修复bug" },
-    { value: "🎉 init", name: "  🎉 init: 初始化" },
-    { value: "✏️ docs", name: "  ✏️ docs: 文档变更" },
-    { value: "💄 style", name: "  💄 style: 更改样式" },
-    { value: "♻️ refactor", name: "  ♻️ refactor: 重构" },
-    { value: "⚡️ perf", name: "  ⚡️ perf: 性能优化" },
-    { value: "✅ test", name: "  ✅  test: 测试" },
-    { value: "⏪️ revert", name: "  ⏪️ revert: 回退" },
-    { value: "📦 build", name: "  📦 build: 打包" },
-    { value: "🚀 chore", name: "  🚀 chore: 构建/工程依赖/工具" },
-    { value: "👷 ci", name: "  👷 ci: CI related changes" },
-  ],
-
-  scopes: [
-    { name: "components" },
-    { name: "page" },
-    { name: "css" },
-    { name: "api" },
-    { name: "README.md" },
-    { name: "custom" },
-  ],
-
-  messages: {
-    type: "请选择提交类型(必填)",
-    scope: "请选择文件修改范围(必填):",
-    customScope: "请输自定义文件修改范围(必填)",
-    subject: "请简要描述提交(必填)",
-    body: "请输入详细描述(可选)",
-    breaking: "列出任何breaking changes(可选)",
-    footer: "请输入要关闭的issue(可选)",
-    confirmCommit: "确定提交吗",
-  },
-
-  allowCustomScopes: true,
-  allowBreakingChanges: ["✨ feat", "🐛 fix"],
-  subjectLimit: 49,
-};
-```
-
-## 📋 Available Scripts
-
-After initialization, the following scripts will be added to your `package.json`:
-
-- `lint`: Run ESLint on all TypeScript/JavaScript/JSON files
-- `format`: Format all files using Prettier
-- `commit`: Interactive commit using commitizen
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run the linter (`pnpm run lint`) and formatter (`pnpm run format`)
-5. Commit your changes using the commitizen interface (`pnpm run commit`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-## ©️ License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [ESLint](https://eslint.org/) - Pluggable JavaScript linter
-- [Prettier](https://prettier.io/) - Opinionated code formatter
-- [Husky](https://typicode.github.io/husky/) - Git hooks made easy
-- [lint-staged](https://github.com/okonet/lint-staged) - Run linters on staged files
-- [commitlint](https://commitlint.js.org/) - Lint commit messages
-- [commitizen](https://github.com/commitizen/cz-cli) - Interactive commit prompts
-- [TypeScript](https://www.typescriptlang.org/) - Typed JavaScript at any scale
