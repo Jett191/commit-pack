@@ -1,6 +1,6 @@
 <div align="right">
 
-[English](./README_EN.md)
+[English](https://github.com/Jett191/commit-pack/blob/main/README_EN.md)
 
 </div>
 
