@@ -16,13 +16,9 @@
 
 ## 🎬 Demo
 
-<p align="center">
-  <video src="https://img.jett191.site/video/commitpack.mp4"
-         controls
-         muted
-         width="800">
-  </video>
-</p>
+https://github.com/user-attachments/assets/8d99c810-81f2-4678-bf62-22bc5d2eee2a
+
+
 
 ## 🚀 快速开始
 
