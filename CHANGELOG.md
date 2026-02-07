@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.8](https://github.com/Jett191/commit-pack/compare/v1.1.7...v1.1.8) (2026-02-07)
+
+
+
 ## [1.1.7](https://github.com/Jett191/commit-pack/compare/v1.1.5...v1.1.7) (2026-02-06)
 
 
