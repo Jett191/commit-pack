@@ -3,6 +3,7 @@
 [English](./README_EN.md)
 
 </div>
+
 # commit-pack
 
 自动化的项目代码质量和提交标准化设置。集成 ESLint、Prettier、Husky、lint-staged、commitlint 和 commitizen，执行代码风格检查和标准化提交消息。
