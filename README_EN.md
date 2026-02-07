@@ -16,66 +16,71 @@ Automated project setup for code quality and commit standardization. Integrates 
 
 ## 🎬 Demo
 
-<p align="center">
-  <video src="https://img.jett191.site/video/commitpack.mp4"
-         controls
-         muted
-         width="800">
-  </video>
-</p>
+https://github.com/user-attachments/assets/8d99c810-81f2-4678-bf62-22bc5d2eee2a
 
 ## 🚀 Quick Start
 
 ### Installation
 
+1. `pnpm`
+
 ```bash
-# Using pnpm
 pnpm add -D commit-pack@latest
 ```
 
+2. `bun`
+
 ```bash
-# Using bun
 bun add -d commit-pack@latest
 ```
 
+3. `npm`
+
 ```bash
-# Using npm
 npm install -D commit-pack@latest
 ```
 
+4. `yarn`
+
 ```bash
-# Using yarn
 yarn add -D commit-pack@latest
 ```
 
-### Initialization
+### Initialize in the project root directory
+
+1. `pnpm`
 
 ```bash
-# Initialize in the root of your project
 pnpm exec commit-pack-init
 ```
 
+2. `bun`
+
 ```bash
-# Using bun
 bunx commit-pack-init
 ```
 
+3. `npm`
+
 ```bash
-# Using npx
 npx commit-pack-init
 ```
 
+4. `yarn`
+
 ```bash
-# Using yarn
 yarn dlx commit-pack-init
 ```
 
 ### Monorepo Support
 
+`Initialize for a specific workspace in monorepo`
+
 ```bash
-# Initialize for a specific workspace in monorepo
 pnpm exec commit-pack-init -w workspace-name
-# or
+
+or
+
 pnpm exec commit-pack-init --workspace=workspace-name
 ```
 

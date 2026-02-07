@@ -16,63 +16,56 @@
 
 ## 🎬 Demo
 
-<p align="center">
-  <video src="https://img.jett191.site/video/commitpack.mp4"
-         controls
-         muted
-         width="800">
-  </video>
-</p>
+https://github.com/user-attachments/assets/8d99c810-81f2-4678-bf62-22bc5d2eee2a
+
+
 
 ## 🚀 快速开始
 
 ### 安装
+1. `pnpm`
 ```bash
-# 使用 pnpm
 pnpm add -D commit-pack@latest
 ```
-
+2. `bun`
 ```bash
-# 使用 bun
 bun add -d commit-pack@latest
 ```
-
+3. `npm`
 ```bash
-# 使用 npm
 npm install -D commit-pack@latest
 ```
-
+4. `yarn`
 ```bash
-# 使用 yarn
 yarn add -D commit-pack@latest
 ```
 
-### 初始化
+### 在项目根目录初始化
+
+1. `pnpm`
 ```bash
-# 在项目根目录初始化
 pnpm exec commit-pack-init
 ```
-
+2. `bun`
 ```bash
-# 使用 bun
 bunx commit-pack-init
 ```
-
+3. `npm`
 ```bash
-# 使用 npx
 npx commit-pack-init
 ```
-
+4. `yarn`
 ```bash
-# 使用 yarn
 yarn dlx commit-pack-init
 ```
 
-### Monorepo 支持
+### Monorepo
+`为 monorepo 中的特定工作区初始化`
 ```bash
-# 为 monorepo 中的特定工作区初始化
 pnpm exec commit-pack-init -w workspace-name
-# 或
+
+或
+
 pnpm exec commit-pack-init --workspace=workspace-name
 ```
 
