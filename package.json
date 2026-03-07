@@ -1,6 +1,6 @@
 {
   "name": "commit-pack",
-  "version": "1.2.4",
+  "version": "1.2.6",
   "description": "A setup package to automatly check project's style and commit configuration",
   "repository": {
     "type": "git",

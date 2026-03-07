@@ -295,10 +295,12 @@ try {
       } else if (packageManager === 'yarn') {
         updatedPackageJson.scripts.lint = `yarn workspace ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
       } else {
-        updatedPackageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
+        updatedPackageJson.scripts.lint =
+          'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
       }
     } else {
-      updatedPackageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
+      updatedPackageJson.scripts.lint =
+        'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
     }
     console.log(log.success('✅ 已添加 "lint" 至 package.json'))
     modified = true
@@ -353,7 +355,11 @@ try {
 
   // 写入修改后的 package.json
   if (modified) {
-    fs.writeFileSync(packageJsonPath, JSON.stringify(updatedPackageJson, null, 2), 'utf8')
+    fs.writeFileSync(
+      packageJsonPath,
+      JSON.stringify(updatedPackageJson, null, 2),
+      'utf8'
+    )
     console.log(chalk.green('✅ 已更新 package.json'))
     console.log('')
     console.log('')
