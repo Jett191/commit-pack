@@ -1,6 +1,6 @@
 {
   "name": "commit-pack",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "A setup package to automatly check project's style and commit configuration",
   "repository": {
     "type": "git",
@@ -82,6 +82,7 @@
     "inquirer": "^12.0.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "shelljs": "^0.8.5",
     "standard-version": "^9.5.0"
   }
