@@ -276,26 +276,29 @@ try {
     execSync(`sh ${scriptPath}`, { stdio: 'inherit', cwd: actualProjectRoot })
   }
 
+  // 重新读取 package.json，保留 installWithProgress 写入的依赖
+  const updatedPackageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+
   // 创建或更新脚本
-  if (!packageJson.scripts) {
-    packageJson.scripts = {}
+  if (!updatedPackageJson.scripts) {
+    updatedPackageJson.scripts = {}
     console.log('🔥 创建或更新脚本...')
   }
 
   let modified = false
 
-  if (!packageJson.scripts.lint) {
+  if (!updatedPackageJson.scripts.lint) {
     if (workspaceName) {
       // 为workspace项目使用工作空间命令
       if (packageManager === 'pnpm') {
-        packageJson.scripts.lint = `pnpm -F ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
+        updatedPackageJson.scripts.lint = `pnpm -F ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
       } else if (packageManager === 'yarn') {
-        packageJson.scripts.lint = `yarn workspace ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
+        updatedPackageJson.scripts.lint = `yarn workspace ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
       } else {
-        packageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
+        updatedPackageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
       }
     } else {
-      packageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
+      updatedPackageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
     }
     console.log(log.success('✅ 已添加 "lint" 至 package.json'))
     modified = true
@@ -303,18 +306,18 @@ try {
     console.log(log.warn('⚠️ package.json 中已存在 "lint" 未作修改'))
   }
 
-  if (!packageJson.scripts.format) {
+  if (!updatedPackageJson.scripts.format) {
     if (workspaceName) {
       // 为workspace项目使用工作空间命令
       if (packageManager === 'pnpm') {
-        packageJson.scripts.format = `pnpm -F ${workspaceName} exec prettier --config .prettierrc '.' --write`
+        updatedPackageJson.scripts.format = `pnpm -F ${workspaceName} exec prettier --config .prettierrc '.' --write`
       } else if (packageManager === 'yarn') {
-        packageJson.scripts.format = `yarn workspace ${workspaceName} exec prettier --config .prettierrc '.' --write`
+        updatedPackageJson.scripts.format = `yarn workspace ${workspaceName} exec prettier --config .prettierrc '.' --write`
       } else {
-        packageJson.scripts.format = "prettier --config .prettierrc '.' --write"
+        updatedPackageJson.scripts.format = "prettier --config .prettierrc '.' --write"
       }
     } else {
-      packageJson.scripts.format = "prettier --config .prettierrc '.' --write"
+      updatedPackageJson.scripts.format = "prettier --config .prettierrc '.' --write"
     }
     console.log(log.success('✅ 已添加 "format" 至 package.json'))
     modified = true
@@ -326,31 +329,31 @@ try {
   if (workspaceName) {
     // 为workspace项目使用工作空间命令
     if (packageManager === 'pnpm') {
-      packageJson.scripts.commit = `pnpm -F ${workspaceName} exec cz`
+      updatedPackageJson.scripts.commit = `pnpm -F ${workspaceName} exec cz`
     } else if (packageManager === 'yarn') {
-      packageJson.scripts.commit = `yarn workspace ${workspaceName} exec cz`
+      updatedPackageJson.scripts.commit = `yarn workspace ${workspaceName} exec cz`
     } else {
-      packageJson.scripts.commit = 'cz'
+      updatedPackageJson.scripts.commit = 'cz'
     }
   } else {
-    packageJson.scripts.commit = 'cz'
+    updatedPackageJson.scripts.commit = 'cz'
   }
   console.log(log.success('✅ 已添加 "commit" 至 package.json'))
   modified = true
 
   // 添加或更新 "config.commitizen" 配置
-  if (!packageJson.config) {
-    packageJson.config = {}
+  if (!updatedPackageJson.config) {
+    updatedPackageJson.config = {}
   }
 
-  packageJson.config.commitizen = {
+  updatedPackageJson.config.commitizen = {
     path: 'node_modules/cz-customizable'
   }
   modified = true
 
   // 写入修改后的 package.json
   if (modified) {
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
+    fs.writeFileSync(packageJsonPath, JSON.stringify(updatedPackageJson, null, 2), 'utf8')
     console.log(chalk.green('✅ 已更新 package.json'))
     console.log('')
     console.log('')
