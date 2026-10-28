@@ -18,7 +18,7 @@ Automated project setup for code quality and commit standardization. Integrates 
 - **Interactive Commits**: commitizen provides guided commit creation
 - **Multi-Package Manager**: Supports pnpm, npm, yarn, and bun
 - **Monorepo Ready**: Handles workspace-based projects with `-w` flag
-- **Rollback Safe**: Automatic rollback if initialization fails
+- **Rollback Safe**: Restores existing configs, Husky files, package.json, and lock files on failure
 
 ## 🎬 Demo
 
@@ -52,7 +52,11 @@ npm install -D commit-pack@latest
 yarn add -D commit-pack@latest
 ```
 
-### Initialize in the project root directory
+> The `postinstall` script attempts initialization automatically. If lifecycle scripts are
+> disabled by your package manager, or you need to rerun it, use one of the commands below.
+> A project that has already initialized successfully is skipped safely.
+
+### Initialize manually in the project root (when needed)
 
 1. `pnpm`
 

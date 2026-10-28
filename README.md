@@ -18,7 +18,7 @@
 - **交互式提交**: commitizen 提供引导式提交创建
 - **多包管理器**: 支持 pnpm、npm、yarn 和 bun
 - **支持 Monorepo**: 使用 `-w` 标志处理基于工作区的项目
-- **安全回滚**: 初始化失败时自动回滚
+- **安全回滚**: 初始化失败时恢复原配置、Husky 目录、package.json 和锁文件
 
 ## 🎬 Demo
 
@@ -46,7 +46,10 @@ npm install -D commit-pack@latest
 yarn add -D commit-pack@latest
 ```
 
-### 在项目根目录初始化
+> 安装时 `postinstall` 会自动尝试初始化。若包管理器禁用了安装脚本，或需要重新执行，
+> 可以使用下面的命令手动初始化；已经成功初始化的项目会被安全跳过。
+
+### 手动在项目根目录初始化（按需）
 
 1. `pnpm`
 ```bash

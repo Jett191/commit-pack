@@ -4,182 +4,53 @@
 
 import fs from 'fs'
 import chalk from 'chalk'
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
+import { createRequire } from 'module'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { log } from './chalkColor.js'
-import { installWithProgress } from './installWithProgress.js'
+import { log } from './chalkColor.mjs'
+import { createFileTransaction } from './fileTransaction.mjs'
+import { installWithProgress } from './installWithProgress.mjs'
+import {
+  LOCK_FILES,
+  detectPackageManager,
+  findProjectRoot,
+  findWorkspaceRoot,
+  getInvocationDirectory
+} from './projectUtils.mjs'
 
-const printBanner = () => {
-  const top = '╭' + '─'.repeat(40) + '╮'
-  const bottom = '╰' + '─'.repeat(40) + '╯'
-  const middle = `│  ${chalk.bold.cyan('🚀 Commit Pack 初始化中...')}  │`
-
-  console.log('\n' + top)
-  console.log(middle)
-  console.log(bottom + '\n')
-}
-
-// 模拟 CommonJS 的 __dirname
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// 解析命令行参数
-const args = process.argv.slice(2)
-const workspaceArgIndex = args.findIndex(
-  (arg) => arg.startsWith('--workspace=') || arg.startsWith('-w=')
-)
-let workspaceName = ''
-if (workspaceArgIndex !== -1) {
-  const arg = args[workspaceArgIndex]
-  workspaceName = arg.split('=')[1]
-} else {
-  // 查找是否有单独的 -w 或 --workspace 参数
-  const wIndex = args.findIndex((arg) => arg === '-w')
-  const workspaceIndex = args.findIndex((arg) => arg === '--workspace')
-  if (wIndex !== -1 && wIndex + 1 < args.length) {
-    workspaceName = args[wIndex + 1]
-  } else if (workspaceIndex !== -1 && workspaceIndex + 1 < args.length) {
-    workspaceName = args[workspaceIndex + 1]
-  }
-}
+const CONFIG_PATHS = [
+  '.prettierrc',
+  '.eslintrc',
+  '.commitlintrc.json',
+  '.cz-config.js',
+  '.czrc',
+  '.lintstagedrc',
+  '.prettierignore',
+  '.eslintignore',
+  '.husky',
+  '.commit-pack-init'
+]
 
-// 向上查找带锁文件的根目录
-function findProjectRootWithLockFile() {
-  let dir = __dirname
-  const lockFiles = ['bun.lockb', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json']
+const SETUP_SCRIPTS = [
+  'prettier.sh',
+  'lintstagedrc.sh',
+  'eslint.sh',
+  'czrc.sh',
+  'husky.sh',
+  'cz-config.sh',
+  'commitlintrc.sh'
+]
 
-  while (dir !== path.dirname(dir)) {
-    for (const file of lockFiles) {
-      if (fs.existsSync(path.join(dir, file))) {
-        return dir
-      }
-    }
-    dir = path.dirname(dir)
-  }
-
-  return process.cwd() // fallback
-}
-
-const projectRoot = findProjectRootWithLockFile()
-
-function detectPackageManager() {
-  if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) {
-    return 'pnpm'
-  } else if (fs.existsSync(path.join(projectRoot, 'yarn.lock'))) {
-    return 'yarn'
-  } else if (fs.existsSync(path.join(projectRoot, 'bun.lock'))) {
-    return 'bun'
-  } else {
-    return 'npm'
-  }
-}
-
-const packageManager = detectPackageManager()
-
-// 计算实际的工作目录
-let actualProjectRoot = projectRoot
-if (workspaceName) {
-  const packageJsonContent = JSON.parse(
-    fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')
-  )
-
-  // 根据包管理器确定工作spaces路径
-  let workspaces = []
-  if (packageJsonContent.workspaces) {
-    if (Array.isArray(packageJsonContent.workspaces)) {
-      workspaces = packageJsonContent.workspaces
-    } else if (packageJsonContent.workspaces.packages) {
-      workspaces = packageJsonContent.workspaces.packages
-    }
-  }
-
-  // 查找workspace包的路径
-  if (workspaces.length > 0) {
-    for (const workspacePattern of workspaces) {
-      // 处理通配符模式，例如 'packages/*'
-      if (workspacePattern.includes('*')) {
-        const basePath = workspacePattern.replace('/*', '')
-        const packagesDir = path.join(projectRoot, basePath)
-        if (fs.existsSync(packagesDir)) {
-          const packageDirs = fs.readdirSync(packagesDir)
-          for (const dir of packageDirs) {
-            const dirPath = path.join(packagesDir, dir)
-            if (fs.statSync(dirPath).isDirectory()) {
-              try {
-                const pkgPath = path.join(dirPath, 'package.json')
-                if (fs.existsSync(pkgPath)) {
-                  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-                  if (pkg.name === workspaceName || dir === workspaceName) {
-                    actualProjectRoot = dirPath
-                    break
-                  }
-                }
-              } catch (e) {
-                console.log(e)
-              }
-            }
-          }
-        }
-      } else {
-        // 直接路径匹配
-        const dirPath = path.join(projectRoot, workspacePattern)
-        if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
-          try {
-            const pkgPath = path.join(dirPath, 'package.json')
-            if (fs.existsSync(pkgPath)) {
-              const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-              if (
-                pkg.name === workspaceName ||
-                path.basename(dirPath) === workspaceName
-              ) {
-                actualProjectRoot = dirPath
-                break
-              }
-            }
-          } catch (e) {
-            console.log(e)
-          }
-        }
-      }
-    }
-  }
-}
-
-console.log('')
-printBanner()
-console.log('')
-console.log('')
-console.log(`🍀 包管理器:${packageManager}`)
-console.log(`📁 根目录:${actualProjectRoot}`)
-if (workspaceName) {
-  console.log(`📦 工作空间: ${workspaceName}`)
-}
-
-const packageJsonPath = path.join(actualProjectRoot, 'package.json')
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-
-// 检查是否已经初始化过
-const initFlagPath = path.join(actualProjectRoot, '.commit-pack-init')
-if (fs.existsSync(initFlagPath)) {
-  console.log(log.warn('⚠️ 该工作空间/项目已被初始化，跳过初始化'))
-  process.exit(0)
-}
-
-// 回滚机制：记录初始状态
-const initialPackageJson = JSON.stringify(packageJson, null, 2)
-
-// 确保 devDependencies 存在
-if (!packageJson.devDependencies) {
-  packageJson.devDependencies = {}
-}
-
-const devDependenciesWithVersion = {
+const DEV_DEPENDENCIES_WITH_VERSION = {
   commitizen: '4.2.4',
   eslint: '8.57.1'
 }
 
-const devDependencies = [
+const DEV_DEPENDENCIES = [
   '@typescript-eslint/parser',
   '@typescript-eslint/eslint-plugin',
   'prettier',
@@ -195,246 +66,359 @@ const devDependencies = [
   'prettier-plugin-tailwindcss'
 ]
 
-let dependenciesToInstall = []
+function printBanner() {
+  const top = '╭' + '─'.repeat(40) + '╮'
+  const bottom = '╰' + '─'.repeat(40) + '╯'
+  const middle = `│  ${chalk.bold.cyan('🚀 Commit Pack 初始化中...')}  │`
 
-// 检查并收集需要安装的依赖
-for (const dep of devDependencies) {
-  if (!packageJson.devDependencies[dep]) {
-    dependenciesToInstall.push(dep)
-  }
+  console.log('\n' + top)
+  console.log(middle)
+  console.log(bottom + '\n')
 }
 
-for (const [dep, version] of Object.entries(devDependenciesWithVersion)) {
-  if (!packageJson.devDependencies[dep]) {
-    dependenciesToInstall.push(`${dep}@${version}`)
+export function parseWorkspaceName(args) {
+  const inlineArgument = args.find(
+    (argument) => argument.startsWith('--workspace=') || argument.startsWith('-w=')
+  )
+  if (inlineArgument) return inlineArgument.slice(inlineArgument.indexOf('=') + 1)
+
+  const argumentIndex = args.findIndex(
+    (argument) => argument === '-w' || argument === '--workspace'
+  )
+  if (argumentIndex !== -1 && argumentIndex + 1 < args.length) {
+    return args[argumentIndex + 1]
   }
+
+  return ''
 }
 
-try {
-  installWithProgress(dependenciesToInstall, packageManager, actualProjectRoot)
+function getHuskyCommand(packageManager) {
+  const commands = {
+    pnpm: { command: 'pnpm', args: ['exec', 'husky', 'init'] },
+    yarn: { command: 'yarn', args: ['dlx', 'husky', 'init'] },
+    bun: { command: 'bunx', args: ['husky', 'init'] },
+    npm: { command: 'npx', args: ['husky', 'init'] }
+  }
+  return commands[packageManager]
+}
 
-  let isGitRepo = false
-
+function getGitTopLevel(projectRoot) {
   try {
-    // 获取 Git 仓库的顶级目录
-    const gitTopLevel = execSync('git rev-parse --show-toplevel', {
-      cwd: actualProjectRoot
-    })
-      .toString()
-      .trim()
-    // 比较顶级目录与当前项目目录
-    if (path.resolve(gitTopLevel) === path.resolve(actualProjectRoot)) {
-      isGitRepo = true
-    } else {
-      isGitRepo = false
-    }
+    return execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    }).trim()
   } catch {
-    isGitRepo = false
+    return null
+  }
+}
+
+function getGitHooksPath(gitTopLevel) {
+  try {
+    return execFileSync('git', ['config', '--get', 'core.hooksPath'], {
+      cwd: gitTopLevel,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    }).trim()
+  } catch {
+    return null
+  }
+}
+
+function restoreGitHooksPath(gitTopLevel, hooksPath) {
+  if (hooksPath === null) {
+    try {
+      execFileSync('git', ['config', '--unset-all', 'core.hooksPath'], {
+        cwd: gitTopLevel,
+        stdio: 'ignore'
+      })
+    } catch {
+      // Git 在配置原本不存在时会返回非零状态，可以安全忽略。
+    }
+    return
   }
 
-  if (isGitRepo) {
-    console.log(log.success('👍 Git仓库已存在'))
-  } else {
-    console.log(log.warn('👌 Git仓库初始化...'))
-    execSync('git init', { stdio: 'inherit', cwd: actualProjectRoot })
+  execFileSync('git', ['config', 'core.hooksPath', hooksPath], {
+    cwd: gitTopLevel,
+    stdio: 'ignore'
+  })
+}
+
+function quoteShellArgument(value) {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+export function getWorkspaceHuskyConfiguration(projectRoot, gitTopLevel) {
+  const canonicalProjectRoot = fs.existsSync(projectRoot)
+    ? fs.realpathSync(projectRoot)
+    : path.resolve(projectRoot)
+  const canonicalGitTopLevel = fs.existsSync(gitTopLevel)
+    ? fs.realpathSync(gitTopLevel)
+    : path.resolve(gitTopLevel)
+  const relativeProjectPath = path.relative(canonicalGitTopLevel, canonicalProjectRoot)
+  if (
+    relativeProjectPath === '' ||
+    relativeProjectPath.startsWith('..') ||
+    path.isAbsolute(relativeProjectPath)
+  ) {
+    return null
   }
 
-  // 根据包管理器，执行对应的 Husky 初始化命令
-  let huskyInitCommand = ''
-  switch (packageManager) {
-    case 'pnpm':
-      huskyInitCommand = 'pnpm exec husky init'
-      break
-    case 'yarn':
-      huskyInitCommand = 'yarn dlx husky init'
-      break
-    case 'bun':
-      huskyInitCommand = 'bunx husky init'
-      break
-    default:
-      huskyInitCommand = 'npx husky init'
-      break
+  const projectFromGitRoot = relativeProjectPath.replace(/\\/g, '/')
+  const gitRootFromProject = path
+    .relative(canonicalProjectRoot, canonicalGitTopLevel)
+    .replace(/\\/g, '/')
+  const hooksDirectory = `${projectFromGitRoot}/.husky`
+
+  return {
+    hooksDirectory,
+    prepareScript: `cd ${quoteShellArgument(gitRootFromProject)} && husky ${quoteShellArgument(
+      hooksDirectory
+    )}`
+  }
+}
+
+function initializeHusky({ packageManager, projectRoot, gitTopLevel }) {
+  const workspaceConfiguration = getWorkspaceHuskyConfiguration(
+    projectRoot,
+    gitTopLevel
+  )
+
+  if (!workspaceConfiguration) {
+    const huskyCommand = getHuskyCommand(packageManager)
+    execFileSync(huskyCommand.command, huskyCommand.args, {
+      stdio: 'inherit',
+      cwd: projectRoot
+    })
+    return 'husky'
   }
 
-  console.log(chalk.green(`🐶 Husky初始化...`))
-  execSync(huskyInitCommand, { stdio: 'inherit', cwd: actualProjectRoot })
+  const require = createRequire(import.meta.url)
+  const huskyEntryPath = require.resolve('husky')
+  const huskyBinPath = path.join(path.dirname(huskyEntryPath), 'bin.js')
+  execFileSync(
+    process.execPath,
+    [huskyBinPath, workspaceConfiguration.hooksDirectory],
+    {
+      stdio: 'inherit',
+      cwd: gitTopLevel
+    }
+  )
+  return workspaceConfiguration.prepareScript
+}
 
-  // 执行 setup-script 中的所有文件
-  console.log('🚀 创建配置文件...')
-  const setupScripts = [
-    'prettier.sh',
-    'lintstagedrc.sh',
-    'eslint.sh',
-    'czrc.sh',
-    'husky.sh',
-    'cz-config.sh',
-    'commitlintrc.sh'
+function getTransactionPaths(projectRoot, actualProjectRoot) {
+  const roots = [...new Set([projectRoot, actualProjectRoot])]
+  return [
+    path.join(actualProjectRoot, 'package.json'),
+    ...CONFIG_PATHS.map((file) => path.join(actualProjectRoot, file)),
+    ...roots.flatMap((root) => LOCK_FILES.map((file) => path.join(root, file)))
   ]
+}
 
-  for (const script of setupScripts) {
-    const scriptPath = path.join(__dirname, '..', 'setup-script', script)
-    execSync(`sh ${scriptPath}`, { stdio: 'inherit', cwd: actualProjectRoot })
+function collectDependencies(packageJson) {
+  const dependenciesToInstall = []
+  const existingDependencies = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies
   }
 
-  // 重新读取 package.json，保留 installWithProgress 写入的依赖
-  const updatedPackageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+  for (const dependency of DEV_DEPENDENCIES) {
+    if (!existingDependencies[dependency]) dependenciesToInstall.push(dependency)
+  }
 
-  // 创建或更新脚本
-  if (!updatedPackageJson.scripts) {
-    updatedPackageJson.scripts = {}
+  for (const [dependency, version] of Object.entries(DEV_DEPENDENCIES_WITH_VERSION)) {
+    if (!existingDependencies[dependency]) {
+      dependenciesToInstall.push(`${dependency}@${version}`)
+    }
+  }
+
+  return dependenciesToInstall
+}
+
+function updatePackageJson(
+  packageJsonPath,
+  { packageManager, workspaceName, huskyPrepareScript }
+) {
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+  if (!packageJson.scripts) {
+    packageJson.scripts = {}
     console.log('🔥 创建或更新脚本...')
   }
 
-  let modified = false
-
-  if (!updatedPackageJson.scripts.lint) {
-    if (workspaceName) {
-      // 为workspace项目使用工作空间命令
-      if (packageManager === 'pnpm') {
-        updatedPackageJson.scripts.lint = `pnpm -F ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
-      } else if (packageManager === 'yarn') {
-        updatedPackageJson.scripts.lint = `yarn workspace ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
-      } else {
-        updatedPackageJson.scripts.lint =
-          'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
-      }
+  if (!packageJson.scripts.lint) {
+    if (workspaceName && packageManager === 'pnpm') {
+      packageJson.scripts.lint = `pnpm -F ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
+    } else if (workspaceName && packageManager === 'yarn') {
+      packageJson.scripts.lint = `yarn workspace ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
     } else {
-      updatedPackageJson.scripts.lint =
-        'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
+      packageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
     }
     console.log(log.success('✅ 已添加 "lint" 至 package.json'))
-    modified = true
   } else {
     console.log(log.warn('⚠️ package.json 中已存在 "lint" 未作修改'))
   }
 
-  if (!updatedPackageJson.scripts.format) {
-    if (workspaceName) {
-      // 为workspace项目使用工作空间命令
-      if (packageManager === 'pnpm') {
-        updatedPackageJson.scripts.format = `pnpm -F ${workspaceName} exec prettier --config .prettierrc '.' --write`
-      } else if (packageManager === 'yarn') {
-        updatedPackageJson.scripts.format = `yarn workspace ${workspaceName} exec prettier --config .prettierrc '.' --write`
-      } else {
-        updatedPackageJson.scripts.format = "prettier --config .prettierrc '.' --write"
-      }
+  if (!packageJson.scripts.format) {
+    if (workspaceName && packageManager === 'pnpm') {
+      packageJson.scripts.format = `pnpm -F ${workspaceName} exec prettier --config .prettierrc '.' --write`
+    } else if (workspaceName && packageManager === 'yarn') {
+      packageJson.scripts.format = `yarn workspace ${workspaceName} exec prettier --config .prettierrc '.' --write`
     } else {
-      updatedPackageJson.scripts.format = "prettier --config .prettierrc '.' --write"
+      packageJson.scripts.format = "prettier --config .prettierrc '.' --write"
     }
     console.log(log.success('✅ 已添加 "format" 至 package.json'))
-    modified = true
   } else {
     console.log(log.warn('⚠️ package.json 中已存在 "format" 未作修改'))
   }
 
-  // 添加或更新 "commit" 脚本
-  if (workspaceName) {
-    // 为workspace项目使用工作空间命令
-    if (packageManager === 'pnpm') {
-      updatedPackageJson.scripts.commit = `pnpm -F ${workspaceName} exec cz`
-    } else if (packageManager === 'yarn') {
-      updatedPackageJson.scripts.commit = `yarn workspace ${workspaceName} exec cz`
-    } else {
-      updatedPackageJson.scripts.commit = 'cz'
-    }
+  if (workspaceName && packageManager === 'pnpm') {
+    packageJson.scripts.commit = `pnpm -F ${workspaceName} exec cz`
+  } else if (workspaceName && packageManager === 'yarn') {
+    packageJson.scripts.commit = `yarn workspace ${workspaceName} exec cz`
   } else {
-    updatedPackageJson.scripts.commit = 'cz'
+    packageJson.scripts.commit = 'cz'
   }
   console.log(log.success('✅ 已添加 "commit" 至 package.json'))
-  modified = true
 
-  // 添加或更新 "config.commitizen" 配置
-  if (!updatedPackageJson.config) {
-    updatedPackageJson.config = {}
-  }
-
-  updatedPackageJson.config.commitizen = {
+  if (!packageJson.config) packageJson.config = {}
+  packageJson.config.commitizen = {
     path: 'node_modules/cz-customizable'
   }
-  modified = true
+  packageJson.scripts.prepare = huskyPrepareScript
 
-  // 写入修改后的 package.json
-  if (modified) {
-    fs.writeFileSync(
-      packageJsonPath,
-      JSON.stringify(updatedPackageJson, null, 2),
-      'utf8'
-    )
-    console.log(chalk.green('✅ 已更新 package.json'))
-    console.log('')
-    console.log('')
-  }
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
+  console.log(chalk.green('✅ 已更新 package.json'))
+  console.log('')
+  console.log('')
+}
 
-  // 创建初始化标志文件
-  fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
-  console.log(log.success('   🎉🎉🎉 完成啦!'))
-  console.log('')
-  console.log('')
-  console.log(
-    '   📦 欢迎在仓库中反馈问题或参与改进   https://github.com/Jett191/commit-pack'
-  )
-  console.log('')
-  console.log('')
-  if (workspaceName) {
-    console.log(
-      `   在 ${workspaceName} 工作空间中，运行: git add . && ${packageManager} run commit`
-    )
-  } else {
-    console.log(`   运行 git add  后 | 运行 ${packageManager} run commit 即可`)
-  }
-} catch (error) {
-  console.error(log.error('❌ 初始化过程中发生错误，正在执行回滚...'))
-  console.error('错误详情:', error.message)
-  console.error('错误堆栈:', error.stack)
-  if (error.stdout) console.error('标准输出:', error.stdout.toString())
-  if (error.stderr) console.error('错误输出:', error.stderr.toString())
+export function run(args = process.argv.slice(2)) {
+  let transaction = null
+  let gitDirectoryCreated = null
+  let gitTopLevel = null
+  let originalGitHooksPath = null
+  let huskyInitializationStarted = false
 
   try {
-    // 回滚：恢复原始的package.json
-    fs.writeFileSync(packageJsonPath, initialPackageJson, 'utf8')
-    console.log(log.warn('✅ 已恢复原始 package.json'))
+    const workspaceName = parseWorkspaceName(args)
+    const invocationDirectory = getInvocationDirectory()
+    const projectRoot = findProjectRoot(invocationDirectory)
+    const packageManager = detectPackageManager(projectRoot)
+    const actualProjectRoot = workspaceName
+      ? findWorkspaceRoot(projectRoot, workspaceName)
+      : projectRoot
+    const packageJsonPath = path.join(actualProjectRoot, 'package.json')
+    const initFlagPath = path.join(actualProjectRoot, '.commit-pack-init')
 
-    // 删除可能创建的配置文件
-    const configFiles = [
-      '.prettierrc',
-      '.eslintrc',
-      '.commitlintrc.json',
-      '.cz-config.js',
-      '.czrc',
-      '.lintstagedrc',
-      '.prettierignore',
-      '.eslintignore'
-    ]
-    for (const configFile of configFiles) {
-      const configPath = path.join(actualProjectRoot, configFile)
-      if (fs.existsSync(configPath)) {
-        fs.unlinkSync(configPath)
-        console.log(log.warn(`✅ 已删除临时配置文件: ${configFile}`))
-      }
+    if (!fs.existsSync(packageJsonPath)) {
+      throw new Error(`目标目录中不存在 package.json: ${actualProjectRoot}`)
     }
 
-    // 删除可能创建的.husky目录
-    const huskyDir = path.join(actualProjectRoot, '.husky')
-    if (fs.existsSync(huskyDir)) {
-      fs.rmSync(huskyDir, { recursive: true, force: true })
-      console.log(log.warn('✅ 已删除临时 .husky 目录'))
-    }
+    console.log('')
+    printBanner()
+    console.log('')
+    console.log('')
+    console.log(`🍀 包管理器:${packageManager}`)
+    console.log(`📁 根目录:${actualProjectRoot}`)
+    if (workspaceName) console.log(`📦 工作空间: ${workspaceName}`)
 
-    // 删除初始化标志文件
     if (fs.existsSync(initFlagPath)) {
-      fs.unlinkSync(initFlagPath)
+      console.log(log.warn('⚠️ 该工作空间/项目已被初始化，跳过初始化'))
+      return
     }
 
-    console.log(log.success('   🔄 回滚完成'))
-  } catch (rollbackError) {
-    console.error(log.error('❌ 回滚过程中也发生了错误，请手动检查项目状态'))
-    console.error('回滚错误详情:', rollbackError.message)
-    console.error('回滚错误堆栈:', rollbackError.stack)
-    if (rollbackError.stdout)
-      console.error('回滚标准输出:', rollbackError.stdout.toString())
-    if (rollbackError.stderr)
-      console.error('回滚错误输出:', rollbackError.stderr.toString())
-  }
+    transaction = createFileTransaction(
+      getTransactionPaths(projectRoot, actualProjectRoot)
+    )
 
-  process.exit(1) // 确保进程以错误码退出
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+    const dependenciesToInstall = collectDependencies(packageJson)
+    installWithProgress(dependenciesToInstall, packageManager, actualProjectRoot, {
+      isWorkspace: Boolean(workspaceName)
+    })
+
+    gitTopLevel = getGitTopLevel(actualProjectRoot)
+    if (gitTopLevel) {
+      console.log(log.success(`👍 Git仓库已存在: ${gitTopLevel}`))
+    } else {
+      console.log(log.warn('👌 Git仓库初始化...'))
+      const gitDirectory = path.join(actualProjectRoot, '.git')
+      const gitDirectoryExisted = fs.existsSync(gitDirectory)
+      if (!gitDirectoryExisted) gitDirectoryCreated = gitDirectory
+      execFileSync('git', ['init'], { stdio: 'inherit', cwd: actualProjectRoot })
+      gitTopLevel = actualProjectRoot
+    }
+
+    originalGitHooksPath = getGitHooksPath(gitTopLevel)
+    huskyInitializationStarted = true
+    console.log(chalk.green('🐶 Husky初始化...'))
+    const huskyPrepareScript = initializeHusky({
+      packageManager,
+      projectRoot: actualProjectRoot,
+      gitTopLevel
+    })
+
+    console.log('🚀 创建配置文件...')
+    for (const script of SETUP_SCRIPTS) {
+      const scriptPath = path.join(__dirname, '..', 'setup-script', script)
+      execFileSync('sh', [scriptPath], {
+        stdio: 'inherit',
+        cwd: actualProjectRoot
+      })
+    }
+
+    updatePackageJson(packageJsonPath, {
+      packageManager,
+      workspaceName,
+      huskyPrepareScript
+    })
+    fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
+    transaction.commit()
+    transaction = null
+    gitDirectoryCreated = null
+    huskyInitializationStarted = false
+
+    console.log(log.success('   🎉🎉🎉 完成啦!'))
+    console.log('')
+    console.log('')
+    console.log(
+      '   📦 欢迎在仓库中反馈问题或参与改进   https://github.com/Jett191/commit-pack'
+    )
+    console.log('')
+    console.log('')
+    if (workspaceName) {
+      console.log(
+        `   在 ${workspaceName} 工作空间中，运行: git add . && ${packageManager} run commit`
+      )
+    } else {
+      console.log(`   运行 git add  后 | 运行 ${packageManager} run commit 即可`)
+    }
+  } catch (error) {
+    console.error(log.error('❌ 初始化过程中发生错误，正在执行回滚...'))
+    console.error('错误详情:', error.message)
+    if (error.stdout) console.error('标准输出:', error.stdout.toString())
+    if (error.stderr) console.error('错误输出:', error.stderr.toString())
+
+    try {
+      if (transaction) transaction.rollback()
+      if (huskyInitializationStarted && gitTopLevel && !gitDirectoryCreated) {
+        restoreGitHooksPath(gitTopLevel, originalGitHooksPath)
+      }
+      if (gitDirectoryCreated) {
+        fs.rmSync(gitDirectoryCreated, { recursive: true, force: true })
+      }
+      console.log(log.success('   🔄 回滚完成'))
+    } catch (rollbackError) {
+      console.error(log.error('❌ 回滚过程中也发生了错误，请手动检查项目状态'))
+      console.error('回滚错误详情:', rollbackError.message)
+    }
+
+    process.exitCode = 1
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  run()
 }
