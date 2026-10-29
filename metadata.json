@@ -1,0 +1,67 @@
+{
+  "cli_version": "0.12.2",
+  "checkpoint_id": "01M63476N62N01R0ZNMQC1E4KX",
+  "strategy": "manual-commit",
+  "branch": "Jett191/review-project-issues-2",
+  "checkpoints_count": 4,
+  "files_touched": [
+    ".babelrc",
+    ".eslintignore",
+    ".eslintrc",
+    ".github/workflows/publish.yml",
+    ".husky/commit-msg",
+    ".husky/pre-commit",
+    ".lintstagedrc",
+    ".prettierrc",
+    "README.md",
+    "README_EN.md",
+    "bin/dependencies.mjs",
+    "bin/fileTransaction.mjs",
+    "bin/index.mjs",
+    "bin/installWithProgress.mjs",
+    "bin/projectUtils.mjs",
+    "eslint.config.mjs",
+    "package.json",
+    "pnpm-lock.yaml",
+    "scripts/build.mjs",
+    "setup-script/cz-config.sh",
+    "setup-script/eslint.sh",
+    "setup-script/husky.sh",
+    "setup-script/lintstagedrc.sh",
+    "setup-script/prettier.sh",
+    "test/cli.test.mjs",
+    "test/projectUtils.test.mjs",
+    "test/transaction.test.mjs"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 104547,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2595072,
+    "output_tokens": 23274,
+    "api_call_count": 35,
+    "subagent_tokens_complete": true
+  },
+  "redaction": {
+    "replacements": 0,
+    "layers": {
+      "betterleaks": 0,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 0,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}
