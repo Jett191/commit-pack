@@ -1,5 +1,3 @@
-/* eslint-env node */
-
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -26,10 +24,7 @@ test('rollback restores existing paths and removes newly created paths', (t) => 
   transaction.rollback()
 
   assert.equal(fs.readFileSync(existingFile, 'utf8'), '{"name":"original"}')
-  assert.equal(
-    fs.readFileSync(path.join(existingDirectory, 'pre-commit'), 'utf8'),
-    'original'
-  )
+  assert.equal(fs.readFileSync(path.join(existingDirectory, 'pre-commit'), 'utf8'), 'original')
   assert.equal(fs.existsSync(newFile), false)
 })
 

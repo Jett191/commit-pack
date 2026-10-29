@@ -1,14 +1,9 @@
 #!/usr/bin/env sh
 set -e
 
+REPO_ROOT=$(git rev-parse --show-toplevel)
 HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$HOOK_DIR/.."
-
-if [ -n "$PNPM_PACKAGE_NAME" ]; then
-  # 在工作空间环境中运行 pnpm 命令
-  pnpm exec -- commitlint --edit "$1"
-else
-  # 在普通环境中运行
-  npx --no -- commitlint --edit "$1"
-fi
-
+PATH="$PWD/node_modules/.bin:$REPO_ROOT/node_modules/.bin:$PATH"
+export PATH
+pnpm exec commitlint --edit "$1"

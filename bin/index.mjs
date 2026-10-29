@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-/* eslint-env node */
-
 import fs from 'fs'
 import chalk from 'chalk'
+import semver from 'semver'
+import { DEV_DEPENDENCIES } from './dependencies.mjs'
 import { execFileSync } from 'child_process'
 import { createRequire } from 'module'
 import path from 'path'
@@ -24,13 +24,12 @@ const __dirname = path.dirname(__filename)
 
 const CONFIG_PATHS = [
   '.prettierrc',
-  '.eslintrc',
+  'eslint.config.mjs',
   '.commitlintrc.json',
-  '.cz-config.js',
+  '.cz-config.cjs',
   '.czrc',
   '.lintstagedrc',
   '.prettierignore',
-  '.eslintignore',
   '.husky',
   '.commit-pack-init'
 ]
@@ -43,27 +42,6 @@ const SETUP_SCRIPTS = [
   'husky.sh',
   'cz-config.sh',
   'commitlintrc.sh'
-]
-
-const DEV_DEPENDENCIES_WITH_VERSION = {
-  commitizen: '4.2.4',
-  eslint: '8.57.1'
-}
-
-const DEV_DEPENDENCIES = [
-  '@typescript-eslint/parser',
-  '@typescript-eslint/eslint-plugin',
-  'prettier',
-  'eslint-config-prettier',
-  'eslint-plugin-prettier',
-  'husky',
-  'lint-staged',
-  '@commitlint/cli',
-  '@commitlint/config-conventional',
-  'commitlint-config-cz',
-  'cz-customizable',
-  'cz-custom',
-  'prettier-plugin-tailwindcss'
 ]
 
 function printBanner() {
@@ -90,16 +68,6 @@ export function parseWorkspaceName(args) {
   }
 
   return ''
-}
-
-function getHuskyCommand(packageManager) {
-  const commands = {
-    pnpm: { command: 'pnpm', args: ['exec', 'husky', 'init'] },
-    yarn: { command: 'yarn', args: ['dlx', 'husky', 'init'] },
-    bun: { command: 'bunx', args: ['husky', 'init'] },
-    npm: { command: 'npx', args: ['husky', 'init'] }
-  }
-  return commands[packageManager]
 }
 
 function getGitTopLevel(projectRoot) {
@@ -179,33 +147,20 @@ export function getWorkspaceHuskyConfiguration(projectRoot, gitTopLevel) {
   }
 }
 
-function initializeHusky({ packageManager, projectRoot, gitTopLevel }) {
-  const workspaceConfiguration = getWorkspaceHuskyConfiguration(
-    projectRoot,
-    gitTopLevel
-  )
-
-  if (!workspaceConfiguration) {
-    const huskyCommand = getHuskyCommand(packageManager)
-    execFileSync(huskyCommand.command, huskyCommand.args, {
-      stdio: 'inherit',
-      cwd: projectRoot
-    })
-    return 'husky'
-  }
-
-  const require = createRequire(import.meta.url)
-  const huskyEntryPath = require.resolve('husky')
-  const huskyBinPath = path.join(path.dirname(huskyEntryPath), 'bin.js')
+function initializeHusky({ projectRoot, gitTopLevel }) {
+  const workspaceConfiguration = getWorkspaceHuskyConfiguration(projectRoot, gitTopLevel)
+  // Husky belongs to the target project, not to the initializer's runtime dependencies.
+  const require = createRequire(path.join(projectRoot, 'package.json'))
+  const huskyBinPath = path.join(path.dirname(require.resolve('husky')), 'bin.js')
   execFileSync(
     process.execPath,
-    [huskyBinPath, workspaceConfiguration.hooksDirectory],
+    [huskyBinPath, workspaceConfiguration?.hooksDirectory || '.husky'],
     {
       stdio: 'inherit',
       cwd: gitTopLevel
     }
   )
-  return workspaceConfiguration.prepareScript
+  return workspaceConfiguration?.prepareScript || 'husky'
 }
 
 function getTransactionPaths(projectRoot, actualProjectRoot) {
@@ -217,81 +172,64 @@ function getTransactionPaths(projectRoot, actualProjectRoot) {
   ]
 }
 
-function collectDependencies(packageJson) {
-  const dependenciesToInstall = []
-  const existingDependencies = {
-    ...packageJson.dependencies,
-    ...packageJson.devDependencies
+function validateExistingProject(projectRoot, packageJson) {
+  const eslintConfigs = [
+    'eslint.config.js',
+    'eslint.config.mjs',
+    'eslint.config.cjs',
+    'eslint.config.ts',
+    'eslint.config.mts',
+    'eslint.config.cts',
+    '.eslintrc',
+    '.eslintrc.js',
+    '.eslintrc.cjs',
+    '.eslintrc.json',
+    '.eslintrc.yml',
+    '.eslintrc.yaml',
+    '.eslintignore'
+  ]
+  if (
+    packageJson.eslintConfig ||
+    eslintConfigs.some((file) => fs.existsSync(path.join(projectRoot, file)))
+  ) {
+    throw new Error(
+      '检测到已有 ESLint 配置。请先手动迁移或备份并移除配置，再初始化；不会自动覆盖。'
+    )
   }
-
-  for (const dependency of DEV_DEPENDENCIES) {
-    if (!existingDependencies[dependency]) dependenciesToInstall.push(dependency)
-  }
-
-  for (const [dependency, version] of Object.entries(DEV_DEPENDENCIES_WITH_VERSION)) {
-    if (!existingDependencies[dependency]) {
-      dependenciesToInstall.push(`${dependency}@${version}`)
+  const existingDependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
+  for (const [dependency, supported] of Object.entries(DEV_DEPENDENCIES)) {
+    const existing = existingDependencies[dependency]
+    if (existing && (!semver.validRange(existing) || !semver.subset(existing, supported))) {
+      throw new Error(
+        `${dependency} 当前版本范围 ${existing} 不兼容默认工具链 (${supported})，请先手动调整。`
+      )
     }
   }
-
-  return dependenciesToInstall
 }
 
-function updatePackageJson(
-  packageJsonPath,
-  { packageManager, workspaceName, huskyPrepareScript }
-) {
+function collectDependencies(packageJson) {
+  const existingDependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
+  return Object.entries(DEV_DEPENDENCIES)
+    .filter(([dependency]) => !existingDependencies[dependency])
+    .map(([dependency, version]) => `${dependency}@${version}`)
+}
+
+function updatePackageJson(packageJsonPath, { huskyPrepareScript }) {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-  if (!packageJson.scripts) {
-    packageJson.scripts = {}
-    console.log('🔥 创建或更新脚本...')
-  }
-
-  if (!packageJson.scripts.lint) {
-    if (workspaceName && packageManager === 'pnpm') {
-      packageJson.scripts.lint = `pnpm -F ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
-    } else if (workspaceName && packageManager === 'yarn') {
-      packageJson.scripts.lint = `yarn workspace ${workspaceName} exec eslint ./ --ext .ts,.tsx,.json --max-warnings=0`
-    } else {
-      packageJson.scripts.lint = 'eslint ./ --ext .ts,.tsx,.json --max-warnings=0'
-    }
-    console.log(log.success('✅ 已添加 "lint" 至 package.json'))
-  } else {
-    console.log(log.warn('⚠️ package.json 中已存在 "lint" 未作修改'))
-  }
-
-  if (!packageJson.scripts.format) {
-    if (workspaceName && packageManager === 'pnpm') {
-      packageJson.scripts.format = `pnpm -F ${workspaceName} exec prettier --config .prettierrc '.' --write`
-    } else if (workspaceName && packageManager === 'yarn') {
-      packageJson.scripts.format = `yarn workspace ${workspaceName} exec prettier --config .prettierrc '.' --write`
-    } else {
-      packageJson.scripts.format = "prettier --config .prettierrc '.' --write"
-    }
-    console.log(log.success('✅ 已添加 "format" 至 package.json'))
-  } else {
-    console.log(log.warn('⚠️ package.json 中已存在 "format" 未作修改'))
-  }
-
-  if (workspaceName && packageManager === 'pnpm') {
-    packageJson.scripts.commit = `pnpm -F ${workspaceName} exec cz`
-  } else if (workspaceName && packageManager === 'yarn') {
-    packageJson.scripts.commit = `yarn workspace ${workspaceName} exec cz`
-  } else {
-    packageJson.scripts.commit = 'cz'
-  }
-  console.log(log.success('✅ 已添加 "commit" 至 package.json'))
-
-  if (!packageJson.config) packageJson.config = {}
-  packageJson.config.commitizen = {
-    path: 'node_modules/cz-customizable'
-  }
-  packageJson.scripts.prepare = huskyPrepareScript
-
-  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
+  packageJson.scripts ||= {}
+  packageJson.scripts.lint ||= 'eslint . --max-warnings=0'
+  packageJson.scripts.format ||= 'prettier --config .prettierrc . --write'
+  packageJson.scripts.commit ||= 'cz'
+  const prepare = packageJson.scripts.prepare
+  packageJson.scripts.prepare =
+    prepare && prepare !== huskyPrepareScript
+      ? `${prepare} && ${huskyPrepareScript}`
+      : huskyPrepareScript
+  packageJson.config ||= {}
+  packageJson.config.commitizen = { path: 'cz-customizable' }
+  packageJson.config['cz-customizable'] = { config: '.cz-config.cjs' }
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8')
   console.log(chalk.green('✅ 已更新 package.json'))
-  console.log('')
-  console.log('')
 }
 
 export function run(args = process.argv.slice(2)) {
@@ -329,11 +267,11 @@ export function run(args = process.argv.slice(2)) {
       return
     }
 
-    transaction = createFileTransaction(
-      getTransactionPaths(projectRoot, actualProjectRoot)
-    )
-
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+    validateExistingProject(actualProjectRoot, packageJson)
+
+    transaction = createFileTransaction(getTransactionPaths(projectRoot, actualProjectRoot))
+
     const dependenciesToInstall = collectDependencies(packageJson)
     installWithProgress(dependenciesToInstall, packageManager, actualProjectRoot, {
       isWorkspace: Boolean(workspaceName)
@@ -355,7 +293,6 @@ export function run(args = process.argv.slice(2)) {
     huskyInitializationStarted = true
     console.log(chalk.green('🐶 Husky初始化...'))
     const huskyPrepareScript = initializeHusky({
-      packageManager,
       projectRoot: actualProjectRoot,
       gitTopLevel
     })
@@ -365,13 +302,12 @@ export function run(args = process.argv.slice(2)) {
       const scriptPath = path.join(__dirname, '..', 'setup-script', script)
       execFileSync('sh', [scriptPath], {
         stdio: 'inherit',
-        cwd: actualProjectRoot
+        cwd: actualProjectRoot,
+        env: { ...process.env, COMMIT_PACK_PM: packageManager }
       })
     }
 
     updatePackageJson(packageJsonPath, {
-      packageManager,
-      workspaceName,
       huskyPrepareScript
     })
     fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
@@ -383,9 +319,7 @@ export function run(args = process.argv.slice(2)) {
     console.log(log.success('   🎉🎉🎉 完成啦!'))
     console.log('')
     console.log('')
-    console.log(
-      '   📦 欢迎在仓库中反馈问题或参与改进   https://github.com/Jett191/commit-pack'
-    )
+    console.log('   📦 欢迎在仓库中反馈问题或参与改进   https://github.com/Jett191/commit-pack')
     console.log('')
     console.log('')
     if (workspaceName) {
@@ -419,6 +353,6 @@ export function run(args = process.argv.slice(2)) {
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(__filename)) {
   run()
 }

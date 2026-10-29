@@ -1,5 +1,3 @@
-/* eslint-env node */
-
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -20,11 +18,7 @@ function createTemporaryDirectory(t) {
 
 function writePackageJson(directory, contents = {}) {
   fs.mkdirSync(directory, { recursive: true })
-  fs.writeFileSync(
-    path.join(directory, 'package.json'),
-    JSON.stringify(contents),
-    'utf8'
-  )
+  fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify(contents), 'utf8')
 }
 
 test('findProjectRoot finds the lock-file root from a nested workspace', (t) => {
@@ -71,10 +65,7 @@ test('findWorkspaceRoot handles nested globs, braces, and exclusions', (t) => {
 
   assert.equal(findWorkspaceRoot(projectRoot, '@example/api'), nestedPackage)
   assert.equal(findWorkspaceRoot(projectRoot, 'web'), appPackage)
-  assert.throws(
-    () => findWorkspaceRoot(projectRoot, '@example/private'),
-    /找不到 workspace/
-  )
+  assert.throws(() => findWorkspaceRoot(projectRoot, '@example/private'), /找不到 workspace/)
 })
 
 test('pnpm-workspace.yaml patterns are used when package.json has none', (t) => {
@@ -90,4 +81,13 @@ test('pnpm-workspace.yaml patterns are used when package.json has none', (t) => 
 
   assert.deepEqual(getWorkspacePatterns(projectRoot), ['services/*'])
   assert.equal(findWorkspaceRoot(projectRoot, '@example/worker'), servicePackage)
+})
+
+test('detectPackageManager uses declared manager and pnpm workspace before the first lockfile', (t) => {
+  const root = createTemporaryDirectory(t)
+  writePackageJson(root, { packageManager: 'yarn@4.0.0' })
+  assert.equal(detectPackageManager(root), 'yarn')
+  writePackageJson(root)
+  fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
+  assert.equal(detectPackageManager(root), 'pnpm')
 })

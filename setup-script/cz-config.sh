@@ -1,4 +1,4 @@
-cat > .cz-config.js << 'EOF'
+cat > .cz-config.cjs << 'EOF'
 module.exports = {
   types: [
       { value: '✨ feat',     name: '  ✨  feat: 新功能' },
