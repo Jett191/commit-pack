@@ -46,10 +46,11 @@ npm install -D commit-pack@latest
 yarn add -D commit-pack@latest
 ```
 
-> 安装时 `postinstall` 会自动尝试初始化。若包管理器禁用了安装脚本，或需要重新执行，
-> 可以使用下面的命令手动初始化；已经成功初始化的项目会被安全跳过。
+> 要求 Node.js >= 20.19。选择一种包管理器，依次完成“安装”和“初始化”两步。
+> 安装时不再自动生成配置或启用 Git 钩子。
+> 初始化时会一次性将缺少的工具安装为项目开发依赖，再生成配置并设置钩子。
 
-### 手动在项目根目录初始化（按需）
+### 在项目根目录初始化
 
 1. `pnpm`
 ```bash
@@ -57,7 +58,7 @@ pnpm exec commit-pack-init
 ```
 2. `bun`
 ```bash
-bunx commit-pack-init
+bun run commit-pack-init
 ```
 3. `npm`
 ```bash
@@ -65,11 +66,13 @@ npx commit-pack-init
 ```
 4. `yarn`
 ```bash
-yarn dlx commit-pack-init
+yarn exec commit-pack-init
 ```
 
 ### Monorepo
-`为 monorepo 中的特定工作区初始化`
+在 monorepo 根目录执行，将 `workspace-name` 替换为目标工作区 `package.json` 中的 `name`。
+此命令代替上面的根目录初始化命令，无需先初始化根目录。
+
 ```bash
 pnpm exec commit-pack-init -w workspace-name
 
@@ -81,41 +84,41 @@ pnpm exec commit-pack-init --workspace=workspace-name
 ## 🛠️ 包含的内容
 
 ### ESLint 配置
-- 支持 TypeScript 的 `@typescript-eslint/parser`
-- 推荐的 TypeScript 规则
-- 与 Prettier 的集成以避免冲突
-- 适用于 monorepo 的根配置
 
-**.eslintrc**
-```json
-{
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "prettier"
-  ],
+- 使用 ESLint 9 flat config，搭配 typescript-eslint 8 支持 TypeScript
+- 检查 JS/JSX/TS/TSX 及对应模块扩展名；JSON 交给 Prettier 格式化
+- ESLint 与 Prettier 分开运行，eslint-config-prettier 关闭冲突规则
+- 检测到已有 ESLint 配置或不兼容的依赖版本范围时，会在修改前停止并提示
+- 存在 `.commit-pack-init` 标记的项目会跳过；仅升级 commit-pack 不会迁移已有的 ESLint 8 依赖和配置，需手动处理
 
-  "plugins": [
-    "@typescript-eslint",
-    "prettier"
-  ],
+**eslint.config.mjs**
 
-  "rules": {
-    "prettier/prettier": "error",
-    "arrow-body-style": "off",
-    "prefer-arrow-callback": "off"
-  }
-}
+```js
+import js from '@eslint/js'
+import tseslint from 'typescript-eslint'
+import globals from 'globals'
+import prettier from 'eslint-config-prettier'
+
+export default tseslint.config(
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/lib/**', '**/coverage/**', '**/.husky/**'] },
+  {
+    files: ['**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: { ecmaFeatures: { jsx: true } }
+    }
+  },
+  { files: ['**/*.{ts,tsx,mts,cts}'], extends: [tseslint.configs.recommended] },
+  prettier
+)
 ```
 
 ### Prettier 配置
 - 字符串使用单引号
 - 打印宽度为 100 个字符
 - 不使用分号
-- 支持 Tailwind CSS 插件
+- Tailwind CSS 插件按需安装，默认不包含
 - 一致的间距和格式
 
 **.prettierrc**
@@ -126,12 +129,14 @@ pnpm exec commit-pack-init --workspace=workspace-name
   "jsxSingleQuote": true,
   "bracketSameLine": true,
   "semi": false,
-  "plugins": ["prettier-plugin-tailwindcss"],
   "tabWidth": 2,
   "bracketSpacing": true,
   "trailingComma": "none"
 }
 ```
+
+需要 Tailwind 类名排序时，再单独安装 `prettier-plugin-tailwindcss`，并在 `.prettierrc` 中添加
+`"plugins": ["prettier-plugin-tailwindcss"]`，注意选择与项目 Prettier、Node.js 兼容的版本。
 
 ### Commitlint 配置
 - 强制执行常规提交格式
@@ -179,7 +184,9 @@ pnpm exec commit-pack-init --workspace=workspace-name
 - 可自定义范围
 - 引导式提交消息创建
 
-**.cz-config.js**
+初始化会自动生成 `.cz-config.cjs` 并在 `package.json` 中注册，兼容设置了 `"type": "module"` 的项目。
+
+**.cz-config.cjs**
 ```js
 module.exports = {
   types: [
@@ -225,11 +232,24 @@ module.exports = {
 
 ## 📋 可用脚本
 
-初始化后，以下脚本将被添加到您的 `package.json` 中：
+初始化会在 `package.json` 中添加以下脚本；同名脚本已存在时保留原值：
 
-- `lint`: 对所有 TypeScript/JavaScript/JSON 文件运行 ESLint
+- `lint`: 对 JavaScript/TypeScript 文件运行 ESLint（包括 JSX/TSX）
 - `format`: 使用 Prettier 格式化所有文件
 - `commit`: 使用 commitizen 进行交互式提交
+
+以 pnpm 为例（monorepo 请在目标工作区目录内执行）：
+
+```bash
+pnpm run format
+pnpm run lint
+git add .
+pnpm run commit
+```
+
+使用其他包管理器时，将 `pnpm run` 替换为 `npm run`、`yarn run` 或 `bun run`。
+Git 提交时会自动检查暂存文件和提交消息。
+初始化还会将 Husky 加入 `prepare`，保留已有的 prepare 命令。
 
 ## 🤝 贡献
 

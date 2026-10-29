@@ -1,3 +1,4 @@
+set -e
 echo '
 {
   "singleQuote": true,
@@ -7,8 +8,7 @@ echo '
   "semi": false,
   "tabWidth": 2,
   "bracketSpacing": true,
-  "trailingComma": "none",
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "trailingComma": "none"
 }
 ' > .prettierrc
 
@@ -17,5 +17,5 @@ node_modules/
 
 README.md
 
-.cz-config.js
+.cz-config.cjs
 ' > .prettierignore

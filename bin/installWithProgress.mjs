@@ -1,29 +1,24 @@
-/* eslint-env node */
-
 import chalk from 'chalk'
 import { execFileSync } from 'child_process'
-import cliProgress from 'cli-progress'
 import { isMonorepoRoot } from './projectUtils.mjs'
 
 export function getInstallCommand(
-  dependency,
+  dependencies,
   packageManager,
   { installAtWorkspaceRoot = false } = {}
 ) {
-  if (packageManager === 'pnpm' && installAtWorkspaceRoot) {
-    return { command: 'pnpm', args: ['add', '-w', '-D', dependency] }
-  }
-
+  const packages = Array.isArray(dependencies) ? dependencies : [dependencies]
   const commands = {
-    pnpm: { command: 'pnpm', args: ['add', '-D', dependency] },
-    yarn: { command: 'yarn', args: ['add', dependency, '--dev'] },
-    bun: { command: 'bun', args: ['add', '-d', dependency] },
-    npm: { command: 'npm', args: ['install', dependency, '--save-dev'] }
+    pnpm: {
+      command: 'pnpm',
+      args: ['add', ...(installAtWorkspaceRoot ? ['-w'] : []), '-D', ...packages]
+    },
+    yarn: { command: 'yarn', args: ['add', ...packages, '--dev'] },
+    bun: { command: 'bun', args: ['add', '-d', ...packages] },
+    npm: { command: 'npm', args: ['install', ...packages, '--save-dev'] }
   }
-
-  const installCommand = commands[packageManager]
-  if (!installCommand) throw new Error(`不支持的包管理器: ${packageManager}`)
-  return installCommand
+  if (!commands[packageManager]) throw new Error(`不支持的包管理器: ${packageManager}`)
+  return commands[packageManager]
 }
 
 export function installWithProgress(
@@ -32,51 +27,16 @@ export function installWithProgress(
   projectRoot,
   { isWorkspace = false } = {}
 ) {
-  if (!dependencies || dependencies.length === 0) {
-    console.log(chalk.yellow('✅ 所有开发依赖已安装，跳过安装'))
+  if (!dependencies?.length) {
+    console.log(chalk.yellow('✅ 所有开发依赖已声明，跳过安装'))
     return
   }
-
-  console.log('')
-  console.log(`⬇️ 开始安装依赖...`)
-
   const installAtWorkspaceRoot =
     packageManager === 'pnpm' && !isWorkspace && isMonorepoRoot(projectRoot)
-
-  const bar = new cliProgress.SingleBar({
-    format: `  [${chalk.cyan('{bar}')}]{percentage}% | 正在安装: {dep}`,
-    barCompleteChar: '▰',
-    barIncompleteChar: '▱',
-    hideCursor: true
+  const { command, args } = getInstallCommand(dependencies, packageManager, {
+    installAtWorkspaceRoot
   })
-
-  bar.start(dependencies.length, 0, { dep: '' })
-
-  try {
-    for (let index = 0; index < dependencies.length; index += 1) {
-      const dependency = dependencies[index]
-      const { command, args } = getInstallCommand(dependency, packageManager, {
-        installAtWorkspaceRoot
-      })
-
-      bar.update(index, { dep: dependency })
-      execFileSync(command, args, {
-        cwd: projectRoot,
-        stdio: ['pipe', 'pipe', 'pipe']
-      })
-      bar.update(index + 1, { dep: dependency })
-    }
-
-    bar.update(dependencies.length, { dep: chalk.green(' ✔ ') })
-    bar.stop()
-    console.log('')
-    console.log('')
-  } catch (error) {
-    bar.stop()
-    console.log(chalk.red('❌ 安装过程中出错'))
-    console.error('错误详情:', error.message)
-    if (error.stdout) console.error('标准输出:', error.stdout.toString())
-    if (error.stderr) console.error('错误输出:', error.stderr.toString())
-    throw error
-  }
+  console.log(`⬇️ 一次安装 ${dependencies.length} 个开发依赖...`)
+  execFileSync(command, args, { cwd: projectRoot, stdio: 'inherit' })
+  console.log(chalk.green('✅ 依赖安装完成'))
 }

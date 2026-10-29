@@ -1,35 +1,29 @@
-echo '#!/usr/bin/env sh
 set -e
 
-# Git hooks run from the repository root. Resolve the hook file parent so
-# workspace-specific hooks run with the workspace as their working directory.
-HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-cd "$HOOK_DIR/.."
+# Resolve commands using the package manager chosen during initialization.
+# npm uses the local PATH directly: hooks must never download tools.
+case "${COMMIT_PACK_PM:-npm}" in
+  pnpm) runner="pnpm exec " ;;
+  yarn) runner="yarn exec " ;;
+  bun) runner="bun run " ;;
+  *) runner="" ;;
+esac
 
-if [ -n "$PNPM_PACKAGE_NAME" ]; then
-  # 在工作空间环境中运行 pnpm 命令
-  pnpm exec lint-staged
-else
-  # 在普通环境中运行
-  npx lint-staged
-fi
-' > .husky/pre-commit
-
-chmod +x .husky/pre-commit
-
-echo '#!/usr/bin/env sh
+for hook in pre-commit commit-msg; do
+  cat > ".husky/$hook" << 'EOF'
+#!/usr/bin/env sh
 set -e
 
+REPO_ROOT=$(git rev-parse --show-toplevel)
 HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$HOOK_DIR/.."
-
-if [ -n "$PNPM_PACKAGE_NAME" ]; then
-  # 在工作空间环境中运行 pnpm 命令
-  pnpm exec -- commitlint --edit "$1"
-else
-  # 在普通环境中运行
-  npx --no -- commitlint --edit "$1"
-fi
-' > .husky/commit-msg
-
-chmod +x .husky/commit-msg
+PATH="$PWD/node_modules/.bin:$REPO_ROOT/node_modules/.bin:$PATH"
+export PATH
+EOF
+  if [ "$hook" = pre-commit ]; then
+    printf '%slint-staged --config .lintstagedrc\n' "$runner" >> ".husky/$hook"
+  else
+    printf '%scommitlint --edit "$1"\n' "$runner" >> ".husky/$hook"
+  fi
+  chmod +x ".husky/$hook"
+done

@@ -1,5 +1,3 @@
-/* eslint-env node */
-
 import fs from 'fs'
 import path from 'path'
 
@@ -29,9 +27,7 @@ function expandBraces(pattern) {
     .split(',')
     .flatMap((part) =>
       expandBraces(
-        `${pattern.slice(0, match.index)}${part}${pattern.slice(
-          match.index + match[0].length
-        )}`
+        `${pattern.slice(0, match.index)}${part}${pattern.slice(match.index + match[0].length)}`
       )
     )
 }
@@ -168,10 +164,7 @@ export function findProjectRoot(startDirectory) {
       return directory
     }
 
-    if (
-      nearestPackageDirectory === null &&
-      fs.existsSync(path.join(directory, 'package.json'))
-    ) {
+    if (nearestPackageDirectory === null && fs.existsSync(path.join(directory, 'package.json'))) {
       nearestPackageDirectory = directory
     }
 
@@ -192,15 +185,19 @@ export function detectPackageManager(projectRoot) {
   ) {
     return 'bun'
   }
+  const packageJsonPath = path.join(projectRoot, 'package.json')
+  if (fs.existsSync(packageJsonPath)) {
+    const { packageManager } = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+    const declared = packageManager?.split('@')[0]
+    if (['npm', 'pnpm', 'yarn', 'bun'].includes(declared)) return declared
+  }
+  if (fs.existsSync(path.join(projectRoot, 'pnpm-workspace.yaml'))) return 'pnpm'
   return 'npm'
 }
 
 export function getWorkspacePatterns(projectRoot) {
   return [
-    ...new Set([
-      ...readPackageJsonWorkspaces(projectRoot),
-      ...readPnpmWorkspaces(projectRoot)
-    ])
+    ...new Set([...readPackageJsonWorkspaces(projectRoot), ...readPnpmWorkspaces(projectRoot)])
   ]
 }
 
@@ -223,22 +220,15 @@ export function findWorkspaceRoot(projectRoot, workspaceName) {
     for (const directory of discoverPackageDirectories(searchBase)) {
       const relativePath = path.relative(projectRoot, directory).replace(/\\/g, '/')
       const included = matchesPattern(relativePath, pattern)
-      const excluded = excludedPatterns.some((item) =>
-        matchesPattern(relativePath, item)
-      )
+      const excluded = excludedPatterns.some((item) => matchesPattern(relativePath, item))
       if (included && !excluded) candidates.add(directory)
     }
   }
 
   for (const directory of candidates) {
     try {
-      const packageJson = JSON.parse(
-        fs.readFileSync(path.join(directory, 'package.json'), 'utf8')
-      )
-      if (
-        packageJson.name === workspaceName ||
-        path.basename(directory) === workspaceName
-      ) {
+      const packageJson = JSON.parse(fs.readFileSync(path.join(directory, 'package.json'), 'utf8'))
+      if (packageJson.name === workspaceName || path.basename(directory) === workspaceName) {
         return directory
       }
     } catch {

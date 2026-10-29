@@ -52,11 +52,11 @@ npm install -D commit-pack@latest
 yarn add -D commit-pack@latest
 ```
 
-> The `postinstall` script attempts initialization automatically. If lifecycle scripts are
-> disabled by your package manager, or you need to rerun it, use one of the commands below.
-> A project that has already initialized successfully is skipped safely.
+> Requires Node.js >= 20.19. Choose one package manager and use it for both steps: install, then initialize.
+> Installation no longer generates configuration or enables Git hooks automatically.
+> Initialization installs missing tools as project devDependencies in one batch, then generates configuration and sets up hooks.
 
-### Initialize manually in the project root (when needed)
+### Initialize in the project root
 
 1. `pnpm`
 
@@ -67,7 +67,7 @@ pnpm exec commit-pack-init
 2. `bun`
 
 ```bash
-bunx commit-pack-init
+bun run commit-pack-init
 ```
 
 3. `npm`
@@ -79,12 +79,12 @@ npx commit-pack-init
 4. `yarn`
 
 ```bash
-yarn dlx commit-pack-init
+yarn exec commit-pack-init
 ```
 
 ### Monorepo Support
 
-`Initialize for a specific workspace in monorepo`
+Run from the monorepo root, replacing `workspace-name` with the target package's `name` in `package.json`. Use this instead of the root initialization command above.
 
 ```bash
 pnpm exec commit-pack-init -w workspace-name
@@ -98,32 +98,33 @@ pnpm exec commit-pack-init --workspace=workspace-name
 
 ### ESLint Configuration
 
-- TypeScript support with `@typescript-eslint/parser`
-- Recommended TypeScript rules
-- Integration with Prettier to avoid conflicts
-- Root configuration to work in monorepos
+- ESLint 9 flat config, with typescript-eslint 8 for TypeScript
+- Checks JS/JSX/TS/TSX and their module variants; JSON is formatted by Prettier
+- ESLint and Prettier run separately; eslint-config-prettier disables conflicting rules
+- Existing ESLint configs or incompatible dependency ranges stop initialization before changes
+- Projects with a `.commit-pack-init` marker are skipped; upgrading commit-pack alone does not migrate existing ESLint 8 dependencies or configuration
 
-**.eslintrc**
+**eslint.config.mjs**
 
-```json
-{
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "prettier"
-  ],
+```js
+import js from '@eslint/js'
+import tseslint from 'typescript-eslint'
+import globals from 'globals'
+import prettier from 'eslint-config-prettier'
 
-  "plugins": ["@typescript-eslint", "prettier"],
-
-  "rules": {
-    "prettier/prettier": "error",
-    "arrow-body-style": "off",
-    "prefer-arrow-callback": "off"
-  }
-}
+export default tseslint.config(
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/lib/**', '**/coverage/**', '**/.husky/**'] },
+  {
+    files: ['**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: { ecmaFeatures: { jsx: true } }
+    }
+  },
+  { files: ['**/*.{ts,tsx,mts,cts}'], extends: [tseslint.configs.recommended] },
+  prettier
+)
 ```
 
 ### Prettier Configuration
@@ -131,7 +132,7 @@ pnpm exec commit-pack-init --workspace=workspace-name
 - Single quotes for strings
 - Print width of 100 characters
 - No semicolons
-- Tailwind CSS plugin support
+- Optional Tailwind CSS plugin (not installed by default)
 - Consistent spacing and formatting
 
 **.prettierrc**
@@ -143,12 +144,14 @@ pnpm exec commit-pack-init --workspace=workspace-name
   "jsxSingleQuote": true,
   "bracketSameLine": true,
   "semi": false,
-  "plugins": ["prettier-plugin-tailwindcss"],
   "tabWidth": 2,
   "bracketSpacing": true,
   "trailingComma": "none"
 }
 ```
+
+For Tailwind class sorting, install `prettier-plugin-tailwindcss` separately and add
+`"plugins": ["prettier-plugin-tailwindcss"]` to `.prettierrc`, using a version compatible with your Prettier and Node.js.
 
 ### Commitlint Configuration
 
@@ -199,7 +202,9 @@ pnpm exec commit-pack-init --workspace=workspace-name
 - Customizable scopes
 - Guided commit message creation
 
-**.cz-config.js**
+The initializer creates `.cz-config.cjs` and registers it in `package.json`, including for projects with `"type": "module"`.
+
+**.cz-config.cjs**
 
 ```js
 module.exports = {
@@ -246,11 +251,24 @@ module.exports = {
 
 ## 📋 Available Scripts
 
-After initialization, the following scripts will be added to your `package.json`:
+Initialization adds the following scripts to `package.json` if they are not already defined:
 
-- `lint`: Run ESLint on all TypeScript/JavaScript/JSON files
+- `lint`: Run ESLint on JavaScript/TypeScript files (including JSX/TSX)
 - `format`: Format all files using Prettier
 - `commit`: Interactive commit using commitizen
+
+For example, with pnpm (run inside the selected workspace for monorepos):
+
+```bash
+pnpm run format
+pnpm run lint
+git add .
+pnpm run commit
+```
+
+For other package managers, replace `pnpm run` with `npm run`, `yarn run`, or `bun run`.
+Git commits run staged-file checks and commit-message validation automatically.
+Initialization also adds Husky to `prepare`, retaining any existing prepare command.
 
 ## 🤝 Contributing
 

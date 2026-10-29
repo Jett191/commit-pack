@@ -1,5 +1,5 @@
 echo '
 {
-  "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"]
+  "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": ["eslint --fix", "prettier --write"]
 }
 ' > .lintstagedrc

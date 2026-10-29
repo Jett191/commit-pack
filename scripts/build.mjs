@@ -1,5 +1,3 @@
-/* eslint-env node */
-
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -11,9 +9,7 @@ const outputDirectory = path.join(repositoryRoot, 'lib')
 fs.rmSync(outputDirectory, { recursive: true, force: true })
 fs.mkdirSync(outputDirectory, { recursive: true })
 
-const sourceFiles = fs
-  .readdirSync(sourceDirectory)
-  .filter((file) => file.endsWith('.mjs'))
+const sourceFiles = fs.readdirSync(sourceDirectory).filter((file) => file.endsWith('.mjs'))
 
 for (const file of sourceFiles) {
   fs.copyFileSync(path.join(sourceDirectory, file), path.join(outputDirectory, file))

@@ -9,6 +9,11 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -47,7 +52,24 @@ jobs:
 
       # 7. 更新版本号并创建标签
       - name: Bump version and create tag
-        run: HUSKY=0 pnpm run release
+        run: |
+          # Release commits live on tags; main is protected and may have an older version.
+          node <<'NODE'
+          const fs = require('node:fs')
+          const { execFileSync } = require('node:child_process')
+          const semver = require('semver')
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+          const latest = execFileSync('git', ['tag', '--list', 'v*'], { encoding: 'utf8' })
+            .trim().split('\n')
+            .map(tag => semver.valid(tag))
+            .filter(version => version && !semver.prerelease(version))
+            .sort(semver.rcompare)[0]
+          if (latest && semver.gt(latest, pkg.version)) {
+            pkg.version = latest
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n')
+          }
+          NODE
+          HUSKY=0 pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: 0
