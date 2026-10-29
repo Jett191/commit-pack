@@ -1,5 +1,5 @@
 module.exports = {
-    types: [
+  types: [
       { value: '✨ feat',     name: '  ✨  feat: 新功能' },
       { value: '🐛 fix',      name: '  🐛  fix: 修复bug' },
       { value: '🎉 init',     name: '  🎉  init: 初始化' },
@@ -12,30 +12,29 @@ module.exports = {
       { value: '📦 build',    name: '  📦  build: 打包' },
       { value: '🚀 chore',    name: '  🚀  chore: 构建/工程依赖/工具' },
       { value: '👷 ci',       name: '  👷  ci: CI related changes' }
-    ],
+  ],
 
-    scopes: [
-      { name: 'index.js' },
-      { name: 'package.js' },
-      { name: 'publish' },
-      { name: 'setup-script' },
-      { name: 'README.md' },
-      { name: 'custom' }
-    ],
+  scopes: [
+    { name: 'components' },
+    { name: 'page' },
+    { name: 'css' },
+    { name: 'api' },
+    { name: 'README.md' },
+    { name: 'custom' }
+  ],
 
-    messages: {
-      type: '请选择提交类型(必填)',
-      scope: '请选择文件修改范围(必填):',
-      customScope: '请输自定义文件修改范围(必填)',
-      subject: '请简要描述提交(必填)',
-      body: '请输入详细描述(可选)',
-      breaking: '列出任何breaking changes(可选)',
-      footer: '请输入要关闭的issue(可选)',
-      confirmCommit: '确定提交吗'
-    },
+  messages: {
+    type: '请选择提交类型(必填)',
+    scope: '请选择文件修改范围(必填):',
+    customScope: '请输入自定义文件修改范围(必填)',
+    subject: '请简要描述提交(必填)',
+    body: '请输入详细描述(可选)',
+    breaking: '列出任何破坏性更改(可选)',
+    footer: '请输入要关闭的issue(可选)',
+    confirmCommit: '确定提交吗？'
+  },
 
-    allowCustomScopes: true,
-    allowBreakingChanges: ['✨ feat', '🐛 fix'],
-    subjectLimit: 49
-
-  }
+  allowCustomScopes: true,
+  allowBreakingChanges: ['✨ feat', '🐛 fix'],
+  subjectLimit: 49
+}

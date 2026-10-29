@@ -1,1 +1,9 @@
-npx lint-staged
+#!/usr/bin/env sh
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$HOOK_DIR/.."
+PATH="$PWD/node_modules/.bin:$REPO_ROOT/node_modules/.bin:$PATH"
+export PATH
+pnpm exec lint-staged --config .lintstagedrc

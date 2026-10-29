@@ -1,5 +1,8 @@
+
 node_modules/
 
 README.md
 
 .cz-config.js
+
+.opencode/plugins/entire.ts
