@@ -1,0 +1,58 @@
+test on  main [✘!+] via  v24.18.1
+❯ pnpm exec commit-pack-init
+✓ Lockfile passes supply-chain policies (434 entries in 3.9s)
+.                                        | [WARN] deprecated eslint@9.39.5. 10.13.0 is not deprecated, outside the range you declared.
+Downloading typescript@4.9.5: 11.62 MB/11.62 MB, done
+Packages: +14 -13
+++++++++++++++-------------
+Progress: resolved 14, reused 47, downloaded 1, added 14, done
+
+devDependencies:
+- typescript 5.9.3
++ typescript 4.9.5
+
+Done in 5.7s using pnpm v12.16.1
+
+
+╭────────────────────────────────────────╮
+│  🚀 Commit Pack 初始化中...  │
+╰────────────────────────────────────────╯
+
+
+
+🍀 包管理器:pnpm
+📁 根目录:/Users/jett/Downloads/test
+❌ 初始化过程中发生错误，正在执行回滚...
+错误详情: typescript 当前版本范围 ^4 不兼容默认工具链 (^5.6.3)，请先手动调整。
+   🔄 回滚完成
+
+
+上述是我本地的测试项目的结果 我想请你好好帮我修改 你可以去看代码和brain 然后你不要动 告诉我你的修改思路和现在的情况
+
+---
+
+大概就按照你的思路来吧 但是我希望你做到最小侵入更改
+
+---
+
+你说一下 现在的版本兼容上是个什么情况 能用这个包的边界情况在哪 简单回答
+
+---
+
+现在还有一点 就是那些选择有没有问题 能对的上吗 就是提交的时候 简单回答
+
+---
+
+这个不用修 现在我希望你出一个md 或者如果检测到用户有ai相关的md文档 就写入我们这个commit的格式和形式 ai写conmmit也能按照我们配置文件中的commit拼接的规范来写 你来说一下怎么完成会比较好 不要做任何动作
+
+---
+
+行 按照你刚才说的动手吧
+
+---
+
+好了 现在开始收尾吧 简单总结一下 然后帮我按照规范写commit  然后写pr 然后你要更新记录一下brain
+
+---
+
+好了 现在开始收尾吧 简单总结一下 然后帮我按照规范写commit  和 pr 这两个直接输出给我即可 你不要操作  然后你要更新记录一下brain 这个由你来完成
