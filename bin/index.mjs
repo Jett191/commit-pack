@@ -4,13 +4,14 @@ import fs from 'fs'
 import os from 'os'
 import chalk from 'chalk'
 import semver from 'semver'
-import { DEV_DEPENDENCIES } from './dependencies.mjs'
+import { DEV_DEPENDENCIES, TYPESCRIPT_COMPATIBILITY } from './dependencies.mjs'
 import { execFileSync } from 'child_process'
 import { createRequire } from 'module'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { log } from './chalkColor.mjs'
 import { createFileTransaction } from './fileTransaction.mjs'
+import { getDocumentationPaths, writeCommitDocumentation } from './commitDocumentation.mjs'
 import { installWithProgress } from './installWithProgress.mjs'
 import {
   LOCK_FILES,
@@ -170,13 +171,48 @@ function initializeHusky({ projectRoot, gitTopLevel }) {
   return workspaceConfiguration?.prepareScript || 'husky'
 }
 
-function getTransactionPaths(projectRoot, actualProjectRoot) {
+function getTransactionPaths(projectRoot, actualProjectRoot, documentationPaths) {
   const roots = [...new Set([projectRoot, actualProjectRoot])]
   return [
     path.join(actualProjectRoot, 'package.json'),
+    ...documentationPaths,
     ...CONFIG_PATHS.map((file) => path.join(actualProjectRoot, file)),
     ...roots.flatMap((root) => LOCK_FILES.map((file) => path.join(root, file)))
   ]
+}
+
+function validateTypeScript(projectRoot, declared, warn = true) {
+  if (!declared) return
+  let installed
+  const require = createRequire(path.join(projectRoot, 'package.json'))
+  try {
+    installed = JSON.parse(
+      fs.readFileSync(require.resolve('typescript/package.json'), 'utf8')
+    ).version
+  } catch (error) {
+    if (error.code !== 'MODULE_NOT_FOUND') throw error
+  }
+  const validRange = semver.validRange(declared)
+  const rangeSupported = validRange && semver.subset(declared, TYPESCRIPT_COMPATIBILITY)
+  const installedSupported =
+    semver.valid(installed || '') &&
+    validRange &&
+    semver.satisfies(installed, declared) &&
+    semver.satisfies(installed, TYPESCRIPT_COMPATIBILITY)
+  if (installed ? !installedSupported : !rangeSupported) {
+    throw new Error(
+      `typescript 声明范围 ${declared}，已安装版本 ${installed || '未找到'}；` +
+        `需要兼容 ${TYPESCRIPT_COMPATIBILITY} 且符合声明的版本，请先手动调整或安装。`
+    )
+  }
+  if (!rangeSupported && warn) {
+    console.log(
+      log.warn(
+        `⚠️ typescript 当前版本 ${installed} 兼容，保留声明 ${declared}；` +
+          `该范围包含不受支持的版本，建议收窄至 ${TYPESCRIPT_COMPATIBILITY} 内。`
+      )
+    )
+  }
 }
 
 function validateExistingProject(projectRoot, packageJson, repairing = false) {
@@ -209,6 +245,10 @@ function validateExistingProject(projectRoot, packageJson, repairing = false) {
   const existingDependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
   for (const [dependency, supported] of Object.entries(DEV_DEPENDENCIES)) {
     const existing = existingDependencies[dependency]
+    if (dependency === 'typescript') {
+      validateTypeScript(projectRoot, existing)
+      continue
+    }
     if (existing && (!semver.validRange(existing) || !semver.subset(existing, supported))) {
       throw new Error(
         `${dependency} 当前版本范围 ${existing} 不兼容默认工具链 (${supported})，请先手动调整。`
@@ -279,12 +319,25 @@ export function run(args = process.argv.slice(2)) {
       console.log(log.warn('⚠️ 检测到初始化标记，检查并补齐配置；保留已有文件'))
     }
 
-    transaction = createFileTransaction(getTransactionPaths(projectRoot, actualProjectRoot))
+    const documentationPaths = getDocumentationPaths(actualProjectRoot)
+    transaction = createFileTransaction(
+      getTransactionPaths(projectRoot, actualProjectRoot, documentationPaths)
+    )
 
     const dependenciesToInstall = collectDependencies(packageJson)
     installWithProgress(dependenciesToInstall, packageManager, actualProjectRoot, {
       isWorkspace: Boolean(workspaceName)
     })
+    if (dependenciesToInstall.length) {
+      // Installing missing tools can also re-resolve an existing TypeScript range.
+      const installedPackageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+      validateTypeScript(
+        actualProjectRoot,
+        installedPackageJson.devDependencies?.typescript ||
+          installedPackageJson.dependencies?.typescript,
+        false
+      )
+    }
 
     gitTopLevel = getGitTopLevel(actualProjectRoot)
     if (gitTopLevel) {
@@ -336,6 +389,7 @@ export function run(args = process.argv.slice(2)) {
     updatePackageJson(packageJsonPath, {
       huskyPrepareScript
     })
+    writeCommitDocumentation(actualProjectRoot, documentationPaths)
     fs.writeFileSync(initFlagPath, 'initialized', 'utf8')
     transaction.commit()
     transaction = null
@@ -356,7 +410,14 @@ export function run(args = process.argv.slice(2)) {
       console.log(`   运行 git add  后 | 运行 ${packageManager} run commit 即可`)
     }
   } catch (error) {
-    console.error(log.error('❌ 初始化过程中发生错误，正在执行回滚...'))
+    const needsRollback = transaction || huskyInitializationStarted || gitDirectoryCreated
+    console.error(
+      log.error(
+        needsRollback
+          ? '❌ 初始化过程中发生错误，正在执行回滚...'
+          : '❌ 初始化预检查失败，初始化器未修改项目'
+      )
+    )
     console.error('错误详情:', error.message)
     if (error.stdout) console.error('标准输出:', error.stdout.toString())
     if (error.stderr) console.error('错误输出:', error.stderr.toString())
@@ -369,7 +430,8 @@ export function run(args = process.argv.slice(2)) {
       if (gitDirectoryCreated) {
         fs.rmSync(gitDirectoryCreated, { recursive: true, force: true })
       }
-      console.log(log.success('   🔄 回滚完成'))
+      if (needsRollback)
+        console.log(log.success('   🔄 回滚完成（配置、清单及锁文件；不包含 node_modules）'))
     } catch (rollbackError) {
       console.error(log.error('❌ 回滚过程中也发生了错误，请手动检查项目状态'))
       console.error('回滚错误详情:', rollbackError.message)
