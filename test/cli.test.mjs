@@ -251,6 +251,14 @@ test('generated Git hooks accept a valid commit and reject an invalid message', 
   const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
   const initialized = runWorkspaceInitializer(gitRoot)
   assert.equal(initialized.status, 0, initialized.stderr)
+  // Exercise actual Git hooks after recovering the reported missing-script state.
+  const manifest = path.join(workspaceRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  delete pkg.scripts.commit
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
+  const repaired = runWorkspaceInitializer(gitRoot)
+  assert.equal(repaired.status, 0, repaired.stderr)
+  assert.equal(JSON.parse(fs.readFileSync(manifest, 'utf8')).scripts.commit, 'cz')
   execFileSync('git', ['config', 'user.name', 'Commit Pack Test'], { cwd: gitRoot })
   execFileSync('git', ['config', 'user.email', 'test@example.invalid'], { cwd: gitRoot })
   fs.writeFileSync(path.join(workspaceRoot, 'index.ts'), 'export const value: number = 1\n')
@@ -271,4 +279,200 @@ test('generated Git hooks accept a valid commit and reject an invalid message', 
   })
   assert.notEqual(invalid.status, 0)
   assert.match(invalid.stdout + invalid.stderr, /subject-empty|type-empty|scope-empty/)
+})
+
+for (const args of [['-w'], ['--workspace='], ['-w', '--unknown']]) {
+  test(`missing workspace name is rejected: ${args.join(' ')}`, () => {
+    assert.throws(() => parseWorkspaceName(args), /工作区名称/)
+  })
+}
+
+for (const missing of ['scripts', 'config', 'files', 'marker-only']) {
+  test(`marked initialization repairs ${missing} and preserves custom content`, (t) => {
+    const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+    const manifest = path.join(workspaceRoot, 'package.json')
+    if (missing !== 'marker-only') {
+      const first = runWorkspaceInitializer(gitRoot)
+      assert.equal(first.status, 0, first.stderr)
+    }
+    fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+    const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+    if (missing === 'scripts') delete pkg.scripts
+    if (missing === 'config') delete pkg.config
+    pkg.scripts = { ...pkg.scripts, lint: 'echo custom-lint' }
+    fs.writeFileSync(manifest, JSON.stringify(pkg))
+    fs.writeFileSync(path.join(workspaceRoot, '.prettierrc'), '{"semi":true}\n')
+    if (missing === 'files') {
+      fs.rmSync(path.join(workspaceRoot, '.cz-config.cjs'))
+      fs.rmSync(path.join(workspaceRoot, '.husky', 'commit-msg'))
+      fs.writeFileSync(path.join(workspaceRoot, '.husky', 'pre-commit'), '# custom hook\n')
+    }
+    const repaired = runWorkspaceInitializer(gitRoot)
+    assert.equal(repaired.status, 0, repaired.stdout + repaired.stderr)
+    const after = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+    assert.equal(after.scripts.commit, 'cz')
+    assert.equal(after.scripts.lint, 'echo custom-lint')
+    assert.equal(after.config['cz-customizable'].config, '.cz-config.cjs')
+    assert.equal(
+      fs.readFileSync(path.join(workspaceRoot, '.prettierrc'), 'utf8'),
+      '{"semi":true}\n'
+    )
+    assert.ok(fs.existsSync(path.join(workspaceRoot, '.cz-config.cjs')))
+    assert.ok(fs.existsSync(path.join(workspaceRoot, '.husky', 'commit-msg')))
+    if (missing === 'files') {
+      assert.equal(
+        fs.readFileSync(path.join(workspaceRoot, '.husky', 'pre-commit'), 'utf8'),
+        '# custom hook\n'
+      )
+    }
+    const beforeRepeat = fs.readFileSync(manifest, 'utf8')
+    const repeated = runWorkspaceInitializer(gitRoot)
+    assert.equal(repeated.status, 0, repeated.stderr)
+    assert.equal(fs.readFileSync(manifest, 'utf8'), beforeRepeat)
+  })
+}
+
+test('marked incompatible projects fail without overwriting their configuration', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+  fs.writeFileSync(path.join(workspaceRoot, '.eslintrc'), '{"custom":true}')
+  const before = fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8')
+  const result = runWorkspaceInitializer(gitRoot)
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /已有 ESLint 配置/)
+  assert.equal(fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8'), before)
+  assert.equal(fs.readFileSync(path.join(workspaceRoot, '.eslintrc'), 'utf8'), '{"custom":true}')
+})
+
+test('failed marked repair rolls back and retains its original marker', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+  fs.writeFileSync(path.join(workspaceRoot, '.husky'), 'blocked')
+  const before = fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8')
+  const result = runWorkspaceInitializer(gitRoot)
+  assert.notEqual(result.status, 0)
+  assert.equal(fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8'), before)
+  assert.equal(
+    fs.readFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'utf8'),
+    'initialized'
+  )
+  assert.equal(fs.readFileSync(path.join(workspaceRoot, '.husky'), 'utf8'), 'blocked')
+})
+
+test('root project repair preserves custom prepare and Commitizen settings on repeated runs', (t) => {
+  const { workspaceRoot } = createWorkspaceFixture(t)
+  const manifest = path.join(workspaceRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  pkg.scripts = { prepare: 'echo custom-prepare' }
+  pkg.config = { commitizen: { path: 'custom-adapter' } }
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
+  fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+  const invoke = () =>
+    spawnSync(process.execPath, [path.resolve('bin/index.mjs')], {
+      cwd: workspaceRoot,
+      env: { ...process.env, INIT_CWD: workspaceRoot },
+      encoding: 'utf8',
+      timeout: 10000
+    })
+  const first = invoke()
+  assert.equal(first.status, 0, first.stderr)
+  const after = fs.readFileSync(manifest, 'utf8')
+  assert.equal(JSON.parse(after).scripts.commit, 'cz')
+  assert.equal(JSON.parse(after).config.commitizen.path, 'custom-adapter')
+  assert.match(JSON.parse(after).scripts.prepare, /^echo custom-prepare && cd /)
+  const second = invoke()
+  assert.equal(second.status, 0, second.stderr)
+  assert.equal(fs.readFileSync(manifest, 'utf8'), after)
+})
+
+test('failed dependency installation during repair restores manifest and lockfile', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  const manifest = path.join(workspaceRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  delete pkg.devDependencies.commitizen
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
+  const before = fs.readFileSync(manifest, 'utf8')
+  fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+  const lock = path.join(gitRoot, 'package-lock.json')
+  fs.writeFileSync(lock, 'original lock')
+  const fakeBin = path.join(gitRoot, 'fake-bin')
+  fs.mkdirSync(fakeBin)
+  fs.writeFileSync(
+    path.join(fakeBin, 'npm'),
+    `#!${process.execPath}
+const fs = require('fs')
+fs.writeFileSync('package.json', '{}')
+fs.writeFileSync(${JSON.stringify(lock)}, 'changed lock')
+process.exit(1)
+`,
+    { mode: 0o755 }
+  )
+  const result = spawnSync(
+    process.execPath,
+    [path.resolve('bin/index.mjs'), '-w', '@example/web'],
+    {
+      cwd: gitRoot,
+      env: {
+        ...process.env,
+        INIT_CWD: gitRoot,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH}`
+      },
+      encoding: 'utf8',
+      timeout: 10000
+    }
+  )
+  assert.notEqual(result.status, 0)
+  assert.equal(fs.readFileSync(manifest, 'utf8'), before)
+  assert.equal(fs.readFileSync(lock, 'utf8'), 'original lock')
+  assert.equal(
+    fs.readFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'utf8'),
+    'initialized'
+  )
+  assert.equal(fs.existsSync(path.join(workspaceRoot, '.husky')), false)
+})
+
+test('marked repair installs missing dependencies once and retains package manager changes', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  const manifest = path.join(workspaceRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  delete pkg.devDependencies.commitizen
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
+  fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+  const fakeBin = path.join(gitRoot, 'fake-bin')
+  const calls = path.join(gitRoot, 'calls.jsonl')
+  fs.mkdirSync(fakeBin)
+  fs.writeFileSync(
+    path.join(fakeBin, 'npm'),
+    `#!${process.execPath}
+const fs = require('fs')
+fs.appendFileSync(${JSON.stringify(calls)}, JSON.stringify(process.argv.slice(2)) + '\\n')
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+pkg.devDependencies.commitizen = '^4.3.1'
+fs.writeFileSync('package.json', JSON.stringify(pkg))
+`,
+    { mode: 0o755 }
+  )
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const result = spawnSync(
+      process.execPath,
+      [path.resolve('bin/index.mjs'), '-w', '@example/web'],
+      {
+        cwd: gitRoot,
+        env: {
+          ...process.env,
+          INIT_CWD: gitRoot,
+          PATH: `${fakeBin}${path.delimiter}${process.env.PATH}`
+        },
+        encoding: 'utf8',
+        timeout: 10000
+      }
+    )
+    assert.equal(result.status, 0, result.stderr)
+  }
+  assert.deepEqual(fs.readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse), [
+    ['install', 'commitizen@^4.3.1', '--save-dev']
+  ])
+  const after = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  assert.equal(after.devDependencies.commitizen, '^4.3.1')
+  assert.equal(after.scripts.commit, 'cz')
 })

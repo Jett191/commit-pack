@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'fs'
+import os from 'os'
 import chalk from 'chalk'
 import semver from 'semver'
 import { DEV_DEPENDENCIES } from './dependencies.mjs'
@@ -58,13 +59,19 @@ export function parseWorkspaceName(args) {
   const inlineArgument = args.find(
     (argument) => argument.startsWith('--workspace=') || argument.startsWith('-w=')
   )
-  if (inlineArgument) return inlineArgument.slice(inlineArgument.indexOf('=') + 1)
+  if (inlineArgument) {
+    const name = inlineArgument.slice(inlineArgument.indexOf('=') + 1)
+    if (!name) throw new Error('请在 --workspace 后提供工作区名称')
+    return name
+  }
 
   const argumentIndex = args.findIndex(
     (argument) => argument === '-w' || argument === '--workspace'
   )
-  if (argumentIndex !== -1 && argumentIndex + 1 < args.length) {
-    return args[argumentIndex + 1]
+  if (argumentIndex !== -1) {
+    const name = args[argumentIndex + 1]
+    if (!name || name.startsWith('-')) throw new Error('请在 --workspace 后提供工作区名称')
+    return name
   }
 
   return ''
@@ -172,7 +179,7 @@ function getTransactionPaths(projectRoot, actualProjectRoot) {
   ]
 }
 
-function validateExistingProject(projectRoot, packageJson) {
+function validateExistingProject(projectRoot, packageJson, repairing = false) {
   const eslintConfigs = [
     'eslint.config.js',
     'eslint.config.mjs',
@@ -190,7 +197,10 @@ function validateExistingProject(projectRoot, packageJson) {
   ]
   if (
     packageJson.eslintConfig ||
-    eslintConfigs.some((file) => fs.existsSync(path.join(projectRoot, file)))
+    eslintConfigs.some(
+      (file) =>
+        !(repairing && file === 'eslint.config.mjs') && fs.existsSync(path.join(projectRoot, file))
+    )
   ) {
     throw new Error(
       '检测到已有 ESLint 配置。请先手动迁移或备份并移除配置，再初始化；不会自动覆盖。'
@@ -222,12 +232,12 @@ function updatePackageJson(packageJsonPath, { huskyPrepareScript }) {
   packageJson.scripts.commit ||= 'cz'
   const prepare = packageJson.scripts.prepare
   packageJson.scripts.prepare =
-    prepare && prepare !== huskyPrepareScript
+    prepare && prepare !== huskyPrepareScript && !prepare.endsWith(` && ${huskyPrepareScript}`)
       ? `${prepare} && ${huskyPrepareScript}`
-      : huskyPrepareScript
+      : prepare || huskyPrepareScript
   packageJson.config ||= {}
-  packageJson.config.commitizen = { path: 'cz-customizable' }
-  packageJson.config['cz-customizable'] = { config: '.cz-config.cjs' }
+  packageJson.config.commitizen ||= { path: 'cz-customizable' }
+  packageJson.config['cz-customizable'] ||= { config: '.cz-config.cjs' }
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8')
   console.log(chalk.green('✅ 已更新 package.json'))
 }
@@ -262,13 +272,12 @@ export function run(args = process.argv.slice(2)) {
     console.log(`📁 根目录:${actualProjectRoot}`)
     if (workspaceName) console.log(`📦 工作空间: ${workspaceName}`)
 
-    if (fs.existsSync(initFlagPath)) {
-      console.log(log.warn('⚠️ 该工作空间/项目已被初始化，跳过初始化'))
-      return
-    }
-
+    const repairing = fs.existsSync(initFlagPath)
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-    validateExistingProject(actualProjectRoot, packageJson)
+    validateExistingProject(actualProjectRoot, packageJson, repairing)
+    if (repairing) {
+      console.log(log.warn('⚠️ 检测到初始化标记，检查并补齐配置；保留已有文件'))
+    }
 
     transaction = createFileTransaction(getTransactionPaths(projectRoot, actualProjectRoot))
 
@@ -298,13 +307,30 @@ export function run(args = process.argv.slice(2)) {
     })
 
     console.log('🚀 创建配置文件...')
-    for (const script of SETUP_SCRIPTS) {
-      const scriptPath = path.join(__dirname, '..', 'setup-script', script)
-      execFileSync('sh', [scriptPath], {
-        stdio: 'inherit',
-        cwd: actualProjectRoot,
-        env: { ...process.env, COMMIT_PACK_PM: packageManager }
-      })
+    // Generate repairs separately so multi-output scripts cannot overwrite custom files.
+    const outputRoot = repairing
+      ? fs.mkdtempSync(path.join(os.tmpdir(), 'commit-pack-config-'))
+      : actualProjectRoot
+    try {
+      if (repairing) fs.mkdirSync(path.join(outputRoot, '.husky'))
+      for (const script of SETUP_SCRIPTS) {
+        const scriptPath = path.join(__dirname, '..', 'setup-script', script)
+        execFileSync('sh', [scriptPath], {
+          stdio: 'inherit',
+          cwd: outputRoot,
+          env: { ...process.env, COMMIT_PACK_PM: packageManager }
+        })
+      }
+      if (repairing) {
+        const files = CONFIG_PATHS.filter((file) => !['.husky', '.commit-pack-init'].includes(file))
+        files.push('.husky/pre-commit', '.husky/commit-msg')
+        for (const file of files) {
+          const target = path.join(actualProjectRoot, file)
+          if (!fs.existsSync(target)) fs.copyFileSync(path.join(outputRoot, file), target)
+        }
+      }
+    } finally {
+      if (repairing) fs.rmSync(outputRoot, { recursive: true, force: true })
     }
 
     updatePackageJson(packageJsonPath, {

@@ -102,7 +102,7 @@ pnpm exec commit-pack-init --workspace=workspace-name
 - Checks JS/JSX/TS/TSX and their module variants; JSON is formatted by Prettier
 - ESLint and Prettier run separately; eslint-config-prettier disables conflicting rules
 - Existing ESLint configs or incompatible dependency ranges stop initialization before changes
-- Projects with a `.commit-pack-init` marker are skipped; upgrading commit-pack alone does not migrate existing ESLint 8 dependencies or configuration
+- For projects with a `.commit-pack-init` marker, rerunning initialization fills in missing scripts, dependencies, and configuration files while preserving existing configuration and custom hooks; existing ESLint 8 dependencies and configuration still require manual migration
 
 **eslint.config.mjs**
 
