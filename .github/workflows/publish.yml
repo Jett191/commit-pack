@@ -44,6 +44,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Validate before release
+        run: |
+          pnpm run lint
+          pnpm test
+          pnpm run build
+
       # 6. 配置 Git 信息
       - name: Configure Git
         run: |
