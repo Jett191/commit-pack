@@ -96,6 +96,13 @@ pnpm exec commit-pack-init --workspace=workspace-name
 
 ## 🛠️ What's Included
 
+### AI Commit Instructions
+
+Initialization generates `COMMIT_CONVENTION.md` in the target project using its current Commitizen and commitlint configuration, including types, scopes, subject limits, and footer conventions.
+Existing `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` files receive a relative link to the guide; missing AI instruction files are not created.
+Reruns update only the `<!-- commit-pack:begin -->` / `<!-- commit-pack:end -->` block and preserve user content outside it. An existing guide receives an appended block. Documentation changes participate in rollback; symbolic links are not written.
+With `-w`, only the target workspace is updated, leaving repository-root instructions untouched. Rerun initialization after configuration changes to refresh the guide; actual commitlint validation remains authoritative.
+
 ### ESLint Configuration
 
 - ESLint 9 flat config, with typescript-eslint 8 for TypeScript

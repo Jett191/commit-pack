@@ -40,6 +40,60 @@ function runWorkspaceInitializer(gitRoot) {
   })
 }
 
+for (const repairing of [false, true]) {
+  for (const [declared, installed, succeeds] of [
+    ['^4', '4.9.5', true],
+    ['^4.9.5', '4.9.5', true],
+    ['^5', '5.9.3', true],
+    ['^5.9.3', '5.9.3', true],
+    ['^4', '4.7.4', false],
+    ['^4', '5.9.3', false],
+    ['^6', '6.0.0', false],
+    ['latest', '5.9.3', false],
+    ['^4', null, false],
+    ['^5', null, true]
+  ]) {
+    test(`TypeScript ${declared} / ${installed} during ${repairing ? 'repair' : 'initialization'}`, (t) => {
+      const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+      const manifest = path.join(workspaceRoot, 'package.json')
+      const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+      pkg.devDependencies.typescript = declared
+      fs.writeFileSync(manifest, JSON.stringify(pkg))
+      const before = fs.readFileSync(manifest, 'utf8')
+      // Isolate package resolution without modifying the shared node_modules symlink.
+      const modules = path.join(workspaceRoot, 'node_modules')
+      fs.unlinkSync(modules)
+      fs.mkdirSync(modules)
+      fs.symlinkSync(path.resolve('node_modules/husky'), path.join(modules, 'husky'), 'dir')
+      if (installed) {
+        fs.mkdirSync(path.join(modules, 'typescript'))
+        fs.writeFileSync(
+          path.join(modules, 'typescript/package.json'),
+          JSON.stringify({ name: 'typescript', version: installed })
+        )
+      }
+      if (repairing) fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+      const result = runWorkspaceInitializer(gitRoot)
+      assert.equal(result.status, succeeds ? 0 : 1, result.stdout + result.stderr)
+      assert.equal(
+        JSON.parse(fs.readFileSync(manifest, 'utf8')).devDependencies.typescript,
+        declared
+      )
+      if (succeeds) {
+        assert.match(result.stdout, /所有开发依赖已声明，跳过安装/)
+        if (declared === '^4') assert.match(result.stdout, /该范围包含不受支持的版本/)
+      } else {
+        assert.match(result.stderr, /初始化预检查失败/)
+        assert.match(result.stderr, /typescript 声明范围/)
+        assert.doesNotMatch(result.stdout + result.stderr, /回滚完成/)
+        assert.equal(fs.readFileSync(manifest, 'utf8'), before)
+        assert.equal(fs.existsSync(path.join(workspaceRoot, 'eslint.config.mjs')), false)
+        assert.equal(fs.existsSync(path.join(workspaceRoot, '.commit-pack-init')), repairing)
+      }
+    })
+  }
+}
+
 test('workspace arguments keep all documented forms', () => {
   assert.equal(parseWorkspaceName(['-w', '@example/web']), '@example/web')
   assert.equal(parseWorkspaceName(['--workspace', 'web']), 'web')
@@ -100,6 +154,42 @@ test('workspace initialization reuses the outer Git repository', (t) => {
     "cd '../..' && husky 'packages/web/.husky'"
   )
   assert.equal(fs.existsSync(path.join(workspaceRoot, '.commit-pack-init')), true)
+  assert.equal(fs.existsSync(path.join(workspaceRoot, 'COMMIT_CONVENTION.md')), true)
+})
+
+test('workspace repair updates only target AI documents and rolls back documentation failures', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  fs.writeFileSync(path.join(gitRoot, 'AGENTS.md'), 'root instructions')
+  const agents = path.join(workspaceRoot, 'AGENTS.md')
+  const claude = path.join(workspaceRoot, 'CLAUDE.md')
+  const convention = path.join(workspaceRoot, 'COMMIT_CONVENTION.md')
+  fs.writeFileSync(agents, 'workspace instructions')
+  const first = runWorkspaceInitializer(gitRoot)
+  assert.equal(first.status, 0, first.stdout + first.stderr)
+  assert.equal(fs.readFileSync(path.join(gitRoot, 'AGENTS.md'), 'utf8'), 'root instructions')
+  assert.match(fs.readFileSync(agents, 'utf8'), /COMMIT_CONVENTION.md/)
+  fs.writeFileSync(agents, 'new user instructions')
+  fs.writeFileSync(claude, '<!-- commit-pack:begin -->\nunfinished')
+  // Force generation of a new guide before the later CLAUDE.md failure.
+  fs.unlinkSync(convention)
+  const manifest = fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8')
+  const failed = runWorkspaceInitializer(gitRoot)
+  assert.equal(failed.status, 1)
+  assert.match(failed.stderr, /标记不完整或重复/)
+  assert.equal(fs.readFileSync(agents, 'utf8'), 'new user instructions')
+  assert.equal(fs.readFileSync(claude, 'utf8'), '<!-- commit-pack:begin -->\nunfinished')
+  assert.equal(fs.existsSync(convention), false)
+  assert.equal(fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8'), manifest)
+  assert.equal(
+    fs.readFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'utf8'),
+    'initialized'
+  )
+  fs.writeFileSync(claude, 'fixed instructions')
+  const repaired = runWorkspaceInitializer(gitRoot)
+  assert.equal(repaired.status, 0, repaired.stdout + repaired.stderr)
+  const beforeRepeat = fs.readFileSync(agents, 'utf8')
+  assert.equal(runWorkspaceInitializer(gitRoot).status, 0)
+  assert.equal(fs.readFileSync(agents, 'utf8'), beforeRepeat)
 })
 
 test('failed initialization restores files and Git hooks configuration', (t) => {
@@ -475,4 +565,59 @@ fs.writeFileSync('package.json', JSON.stringify(pkg))
   const after = JSON.parse(fs.readFileSync(manifest, 'utf8'))
   assert.equal(after.devDependencies.commitizen, '^4.3.1')
   assert.equal(after.scripts.commit, 'cz')
+})
+
+test('repair rechecks TypeScript after installation and rolls back an incompatible resolution', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  const manifest = path.join(workspaceRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  pkg.devDependencies.typescript = '^4'
+  delete pkg.devDependencies.commitizen
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
+  const before = fs.readFileSync(manifest, 'utf8')
+  const modules = path.join(workspaceRoot, 'node_modules')
+  fs.unlinkSync(modules)
+  fs.mkdirSync(path.join(modules, 'typescript'), { recursive: true })
+  fs.writeFileSync(path.join(modules, 'typescript/package.json'), '{"version":"4.9.5"}')
+  fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
+  const lock = path.join(gitRoot, 'package-lock.json')
+  fs.writeFileSync(lock, 'original lock')
+  const fakeBin = path.join(gitRoot, 'fake-bin')
+  fs.mkdirSync(fakeBin)
+  fs.writeFileSync(
+    path.join(fakeBin, 'npm'),
+    `#!${process.execPath}
+const fs = require('fs')
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+pkg.devDependencies.commitizen = '^4.3.1'
+fs.writeFileSync('package.json', JSON.stringify(pkg))
+fs.writeFileSync('node_modules/typescript/package.json', '{"version":"4.7.4"}')
+fs.writeFileSync(${JSON.stringify(lock)}, 'changed lock')
+`,
+    { mode: 0o755 }
+  )
+  const result = spawnSync(
+    process.execPath,
+    [path.resolve('bin/index.mjs'), '-w', '@example/web'],
+    {
+      cwd: gitRoot,
+      env: {
+        ...process.env,
+        INIT_CWD: gitRoot,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH}`
+      },
+      encoding: 'utf8',
+      timeout: 10000
+    }
+  )
+  assert.equal(result.status, 1, result.stdout + result.stderr)
+  assert.match(result.stderr, /已安装版本 4\.7\.4/)
+  assert.match(result.stdout, /回滚完成/)
+  assert.equal(fs.readFileSync(manifest, 'utf8'), before)
+  assert.equal(fs.readFileSync(lock, 'utf8'), 'original lock')
+  assert.equal(
+    fs.readFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'utf8'),
+    'initialized'
+  )
+  assert.equal(fs.existsSync(path.join(workspaceRoot, 'eslint.config.mjs')), false)
 })

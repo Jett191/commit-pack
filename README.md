@@ -83,6 +83,13 @@ pnpm exec commit-pack-init --workspace=workspace-name
 
 ## 🛠️ 包含的内容
 
+### AI 提交规范
+
+初始化会在目标项目生成 `COMMIT_CONVENTION.md`，从当前 Commitizen 与 commitlint 配置提取提交类型、scope、描述长度及 footer 约定。
+如果目标目录已有 `AGENTS.md`、`CLAUDE.md` 或 `.github/copilot-instructions.md`，会追加规范文件的相对链接；没有这些文件时不会创建它们。
+重复初始化只更新 `<!-- commit-pack:begin -->` / `<!-- commit-pack:end -->` 区块，保留区块外的用户内容；已有同名规范文件会追加该区块。文档更新纳入失败回滚，符号链接不写入。
+使用 `-w` 时仅处理目标工作区，不改动仓库根目录的 AI 指令。配置变更后可重新初始化刷新规范，提交消息仍以实际 commitlint 校验为准。
+
 ### ESLint 配置
 
 - 使用 ESLint 9 flat config，搭配 typescript-eslint 8 支持 TypeScript

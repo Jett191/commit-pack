@@ -1,4 +1,6 @@
-// Compatible major versions, shared by dependency installation and validation.
+// Default installation ranges; TypeScript compatibility is checked separately.
+export const TYPESCRIPT_COMPATIBILITY = '>=4.8.4 <6'
+
 export const DEV_DEPENDENCIES = {
   eslint: '^9.0.0',
   '@eslint/js': '^9.0.0',
