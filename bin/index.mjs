@@ -36,6 +36,22 @@ const CONFIG_PATHS = [
   '.commit-pack-init'
 ]
 
+const ESLINT_CONFIG_FILES = [
+  'eslint.config.js',
+  'eslint.config.mjs',
+  'eslint.config.cjs',
+  'eslint.config.ts',
+  'eslint.config.mts',
+  'eslint.config.cts',
+  '.eslintrc',
+  '.eslintrc.js',
+  '.eslintrc.cjs',
+  '.eslintrc.json',
+  '.eslintrc.yml',
+  '.eslintrc.yaml',
+  '.eslintignore'
+]
+
 const SETUP_SCRIPTS = [
   'prettier.sh',
   'lintstagedrc.sh',
@@ -177,6 +193,7 @@ function getTransactionPaths(projectRoot, actualProjectRoot, documentationPaths)
     path.join(actualProjectRoot, 'package.json'),
     ...documentationPaths,
     ...CONFIG_PATHS.map((file) => path.join(actualProjectRoot, file)),
+    ...ESLINT_CONFIG_FILES.map((file) => path.join(actualProjectRoot, file)),
     ...roots.flatMap((root) => LOCK_FILES.map((file) => path.join(root, file)))
   ]
 }
@@ -215,33 +232,29 @@ function validateTypeScript(projectRoot, declared, warn = true) {
   }
 }
 
-function validateExistingProject(projectRoot, packageJson, repairing = false) {
-  const eslintConfigs = [
-    'eslint.config.js',
-    'eslint.config.mjs',
-    'eslint.config.cjs',
-    'eslint.config.ts',
-    'eslint.config.mts',
-    'eslint.config.cts',
-    '.eslintrc',
-    '.eslintrc.js',
-    '.eslintrc.cjs',
-    '.eslintrc.json',
-    '.eslintrc.yml',
-    '.eslintrc.yaml',
-    '.eslintignore'
-  ]
-  if (
-    packageJson.eslintConfig ||
-    eslintConfigs.some(
-      (file) =>
-        !(repairing && file === 'eslint.config.mjs') && fs.existsSync(path.join(projectRoot, file))
-    )
-  ) {
-    throw new Error(
-      '检测到已有 ESLint 配置。请先手动迁移或备份并移除配置，再初始化；不会自动覆盖。'
-    )
+function hasExistingEslintConfig(projectRoot, packageJson) {
+  return (
+    Boolean(packageJson.eslintConfig) ||
+    ESLINT_CONFIG_FILES.some((file) => fs.existsSync(path.join(projectRoot, file)))
+  )
+}
+
+function removeReplacedEslintConfigs(projectRoot) {
+  for (const file of ESLINT_CONFIG_FILES) {
+    const target = path.join(projectRoot, file)
+    if (file === 'eslint.config.mjs') {
+      try {
+        if (fs.lstatSync(target).isSymbolicLink()) fs.unlinkSync(target)
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error
+      }
+      continue
+    }
+    fs.rmSync(target, { force: true })
   }
+}
+
+function validateExistingProject(projectRoot, packageJson) {
   const existingDependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
   for (const [dependency, supported] of Object.entries(DEV_DEPENDENCIES)) {
     const existing = existingDependencies[dependency]
@@ -266,6 +279,7 @@ function collectDependencies(packageJson) {
 
 function updatePackageJson(packageJsonPath, { huskyPrepareScript }) {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+  delete packageJson.eslintConfig
   packageJson.scripts ||= {}
   packageJson.scripts.lint ||= 'eslint . --max-warnings=0'
   packageJson.scripts.format ||= 'prettier --config .prettierrc . --write'
@@ -314,9 +328,13 @@ export function run(args = process.argv.slice(2)) {
 
     const repairing = fs.existsSync(initFlagPath)
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-    validateExistingProject(actualProjectRoot, packageJson, repairing)
+    const overwriteEslint = hasExistingEslintConfig(actualProjectRoot, packageJson)
+    validateExistingProject(actualProjectRoot, packageJson)
     if (repairing) {
       console.log(log.warn('⚠️ 检测到初始化标记，检查并补齐配置；保留已有文件'))
+    }
+    if (overwriteEslint) {
+      console.log(log.warn('⚠️ 检测到已有 ESLint 配置，将覆盖为默认配置'))
     }
 
     const documentationPaths = getDocumentationPaths(actualProjectRoot)
@@ -365,6 +383,7 @@ export function run(args = process.argv.slice(2)) {
       ? fs.mkdtempSync(path.join(os.tmpdir(), 'commit-pack-config-'))
       : actualProjectRoot
     try {
+      removeReplacedEslintConfigs(actualProjectRoot)
       if (repairing) fs.mkdirSync(path.join(outputRoot, '.husky'))
       for (const script of SETUP_SCRIPTS) {
         const scriptPath = path.join(__dirname, '..', 'setup-script', script)
@@ -379,7 +398,9 @@ export function run(args = process.argv.slice(2)) {
         files.push('.husky/pre-commit', '.husky/commit-msg')
         for (const file of files) {
           const target = path.join(actualProjectRoot, file)
-          if (!fs.existsSync(target)) fs.copyFileSync(path.join(outputRoot, file), target)
+          if (file === 'eslint.config.mjs' || !fs.existsSync(target)) {
+            fs.copyFileSync(path.join(outputRoot, file), target)
+          }
         }
       }
     } finally {

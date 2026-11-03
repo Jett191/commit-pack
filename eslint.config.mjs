@@ -1,9 +1,10 @@
 import js from '@eslint/js'
+import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 import globals from 'globals'
 import prettier from 'eslint-config-prettier'
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: [
       '**/node_modules/**',
@@ -12,7 +13,7 @@ export default tseslint.config(
       '**/lib/**',
       '**/coverage/**',
       '**/.husky/**',
-      '.opencode/**'
+      '**/.opencode/**'
     ]
   },
   {
