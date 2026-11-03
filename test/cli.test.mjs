@@ -280,29 +280,72 @@ test('symlink CLI entry runs initialization instead of silently exiting', (t) =>
   assert.equal(fs.existsSync(path.join(workspaceRoot, '.commit-pack-init')), true)
 })
 
-for (const scenario of ['legacy config', 'flat config', 'ESLint 8']) {
-  test(`initialization rejects ${scenario} before modifying the project`, (t) => {
+for (const scenario of ['legacy config', 'flat config', 'package config']) {
+  test(`initialization overwrites ${scenario}`, (t) => {
     const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
     const manifest = path.join(workspaceRoot, 'package.json')
-    if (scenario === 'ESLint 8') {
-      const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
-      pkg.devDependencies.eslint = '^8.57.1'
-      fs.writeFileSync(manifest, JSON.stringify(pkg))
-    } else {
-      fs.writeFileSync(
-        path.join(workspaceRoot, scenario === 'flat config' ? 'eslint.config.mjs' : '.eslintrc'),
-        '{}'
-      )
+    const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+    if (scenario === 'package config') pkg.eslintConfig = { rules: { 'no-console': 'off' } }
+    fs.writeFileSync(manifest, JSON.stringify(pkg))
+    if (scenario === 'legacy config') {
+      fs.writeFileSync(path.join(workspaceRoot, '.eslintrc'), '{"custom":true}')
+      fs.writeFileSync(path.join(workspaceRoot, '.eslintignore'), 'dist\n')
     }
-    const before = fs.readFileSync(manifest, 'utf8')
+    if (scenario === 'flat config') {
+      fs.writeFileSync(path.join(workspaceRoot, 'eslint.config.mjs'), 'export default []\n')
+      fs.writeFileSync(path.join(workspaceRoot, 'eslint.config.js'), 'module.exports = []\n')
+    }
     const result = runWorkspaceInitializer(gitRoot)
-    assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /ESLint|eslint/)
-    assert.equal(fs.readFileSync(manifest, 'utf8'), before)
-    assert.equal(fs.existsSync(path.join(workspaceRoot, '.husky')), false)
-    assert.equal(fs.existsSync(path.join(workspaceRoot, '.commit-pack-init')), false)
+    assert.equal(result.status, 0, result.stdout + result.stderr)
+    assert.match(result.stdout, /将覆盖为默认配置/)
+    assert.match(
+      fs.readFileSync(path.join(workspaceRoot, 'eslint.config.mjs'), 'utf8'),
+      /export default tseslint\.config\(/
+    )
+    assert.equal(fs.existsSync(path.join(workspaceRoot, '.eslintrc')), false)
+    assert.equal(fs.existsSync(path.join(workspaceRoot, '.eslintignore')), false)
+    assert.equal(fs.existsSync(path.join(workspaceRoot, 'eslint.config.js')), false)
+    assert.equal(JSON.parse(fs.readFileSync(manifest, 'utf8')).eslintConfig, undefined)
+    assert.equal(fs.existsSync(path.join(workspaceRoot, '.commit-pack-init')), true)
   })
 }
+
+test('initialization rejects ESLint 8 before modifying the project', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  const manifest = path.join(workspaceRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  pkg.devDependencies.eslint = '^8.57.1'
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
+  const before = fs.readFileSync(manifest, 'utf8')
+  const result = runWorkspaceInitializer(gitRoot)
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /eslint/)
+  assert.equal(fs.readFileSync(manifest, 'utf8'), before)
+  assert.equal(fs.existsSync(path.join(workspaceRoot, '.husky')), false)
+  assert.equal(fs.existsSync(path.join(workspaceRoot, '.commit-pack-init')), false)
+})
+
+test('failed initialization restores overwritten ESLint config', (t) => {
+  const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  const manifest = path.join(workspaceRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  pkg.eslintConfig = { root: true }
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
+  const before = fs.readFileSync(manifest, 'utf8')
+  fs.writeFileSync(path.join(workspaceRoot, '.eslintrc'), '{"custom":true}')
+  fs.writeFileSync(path.join(workspaceRoot, 'CLAUDE.md'), '<!-- commit-pack:begin -->\nunfinished')
+  const result = runWorkspaceInitializer(gitRoot)
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /标记不完整或重复/)
+  assert.match(result.stdout, /回滚完成/)
+  assert.equal(fs.readFileSync(manifest, 'utf8'), before)
+  assert.equal(fs.readFileSync(path.join(workspaceRoot, '.eslintrc'), 'utf8'), '{"custom":true}')
+  assert.equal(fs.existsSync(path.join(workspaceRoot, 'eslint.config.mjs')), false)
+  assert.equal(
+    fs.readFileSync(path.join(workspaceRoot, 'CLAUDE.md'), 'utf8'),
+    '<!-- commit-pack:begin -->\nunfinished'
+  )
+})
 
 test('generated ESLint, Prettier and Commitizen configurations work in an ESM project', (t) => {
   const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
@@ -422,16 +465,29 @@ for (const missing of ['scripts', 'config', 'files', 'marker-only']) {
   })
 }
 
-test('marked incompatible projects fail without overwriting their configuration', (t) => {
+test('marked initialization overwrites ESLint config and preserves other files', (t) => {
   const { gitRoot, workspaceRoot } = createWorkspaceFixture(t)
+  const manifest = path.join(workspaceRoot, 'package.json')
   fs.writeFileSync(path.join(workspaceRoot, '.commit-pack-init'), 'initialized')
   fs.writeFileSync(path.join(workspaceRoot, '.eslintrc'), '{"custom":true}')
-  const before = fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8')
+  fs.writeFileSync(path.join(workspaceRoot, 'eslint.config.mjs'), 'export default []\n')
+  fs.writeFileSync(path.join(workspaceRoot, '.prettierrc'), '{"semi":true}\n')
+  const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  pkg.eslintConfig = { root: true }
+  pkg.scripts = { lint: 'echo custom-lint' }
+  fs.writeFileSync(manifest, JSON.stringify(pkg))
   const result = runWorkspaceInitializer(gitRoot)
-  assert.notEqual(result.status, 0)
-  assert.match(result.stderr, /已有 ESLint 配置/)
-  assert.equal(fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8'), before)
-  assert.equal(fs.readFileSync(path.join(workspaceRoot, '.eslintrc'), 'utf8'), '{"custom":true}')
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.match(result.stdout, /将覆盖为默认配置/)
+  assert.equal(fs.existsSync(path.join(workspaceRoot, '.eslintrc')), false)
+  assert.match(
+    fs.readFileSync(path.join(workspaceRoot, 'eslint.config.mjs'), 'utf8'),
+    /export default tseslint\.config\(/
+  )
+  assert.equal(fs.readFileSync(path.join(workspaceRoot, '.prettierrc'), 'utf8'), '{"semi":true}\n')
+  const after = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  assert.equal(after.eslintConfig, undefined)
+  assert.equal(after.scripts.lint, 'echo custom-lint')
 })
 
 test('failed marked repair rolls back and retains its original marker', (t) => {

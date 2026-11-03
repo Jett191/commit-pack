@@ -95,8 +95,9 @@ pnpm exec commit-pack-init --workspace=workspace-name
 - 使用 ESLint 9 flat config，搭配 typescript-eslint 8 支持 TypeScript
 - 检查 JS/JSX/TS/TSX 及对应模块扩展名；JSON 交给 Prettier 格式化
 - ESLint 与 Prettier 分开运行，eslint-config-prettier 关闭冲突规则
-- 检测到已有 ESLint 配置或不兼容的依赖版本范围时，会在修改前停止并提示
-- 存在 `.commit-pack-init` 标记时，重新初始化会补齐缺失的脚本、依赖和配置文件，保留已有配置及自定义 hook；不会自动迁移已有的 ESLint 8 依赖和配置，需手动处理
+- 检测到已有 ESLint 配置时，直接覆盖为默认 flat config，并移除其他 ESLint 配置文件
+- 依赖版本范围与默认工具链不兼容时，初始化会在修改前停止并提示
+- 存在 `.commit-pack-init` 标记时，重新初始化会补齐缺失的脚本、依赖和配置文件，保留已有的非 ESLint 配置及自定义 hook，并覆盖已有 ESLint 配置。ESLint 8 依赖需要手动调整到兼容范围
 
 **eslint.config.mjs**
 

@@ -108,8 +108,9 @@ With `-w`, only the target workspace is updated, leaving repository-root instruc
 - ESLint 9 flat config, with typescript-eslint 8 for TypeScript
 - Checks JS/JSX/TS/TSX and their module variants; JSON is formatted by Prettier
 - ESLint and Prettier run separately; eslint-config-prettier disables conflicting rules
-- Existing ESLint configs or incompatible dependency ranges stop initialization before changes
-- For projects with a `.commit-pack-init` marker, rerunning initialization fills in missing scripts, dependencies, and configuration files while preserving existing configuration and custom hooks; existing ESLint 8 dependencies and configuration still require manual migration
+- An existing ESLint config is replaced with the default flat config, and other ESLint config files are removed
+- An incompatible dependency range stops initialization before any changes
+- For projects with a `.commit-pack-init` marker, rerunning initialization fills in missing scripts, dependencies, and configuration files, preserves other existing configuration and custom hooks, and overwrites an existing ESLint config. An ESLint 8 dependency still needs a manual update to a compatible range
 
 **eslint.config.mjs**
 
