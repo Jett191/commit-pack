@@ -1,0 +1,36 @@
+请你不要动任何东西 看看项目 然后简单回答我
+
+---
+
+现在我想问你的事情就是这个包 会向安装它的开发者的AGENTS.md中写入什么 简单回答
+
+---
+
+好的 就是运行初始化命令是 我希望将写入的那一句改为
+<!-- commit-pack:begin -->
+Before generating a commit message, read the [Commit Message Guidelines](COMMIT_CONVENTION.md) and follow the specified format. Use the project's commitlint configuration as the final authority for validation. Write commit messages in Chinese.
+<!-- commit-pack:end -->
+其他的什么都不要更改
+
+---
+
+还有就是我希望写入的eslint.config.mjs中 全局排除文件增加.opencode
+代码大致样子   globalIgnores([
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/coverage/**',
+    '**/.husky/**',
+    '**/.turbo/**',
+    '**/.next/**',
+    '**/.opencode/**'
+  ]),
+
+---
+
+现在准备提交 总结本次代码变更
+2. 根据 COMMIT_CONVENTION 生成 Commit Message、PR Title 和 Description，仅输出，不执行提交或创建 PR。
+3. 检索 Entire Brain 中已有的相关 Memory。
+4. 只有出现新的、经过验证的长期架构决策或开发约束时，才执行 `entire brain remember`
+5. 如果没有值得长期保存的新知识，跳过 Remember。
+7. 检查 Memory 是否保存成功。远端同步单独确认，失败时说明原因。
