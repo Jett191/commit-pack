@@ -157,7 +157,7 @@ export function writeCommitDocumentation(projectRoot, files = getDocumentationPa
     const relative = path.relative(path.dirname(file), convention).split(path.sep).join('/')
     updateManagedBlock(
       file,
-      `生成提交消息前，请阅读 [提交消息规范](${relative})，并遵循其中格式；以项目 commitlint 配置为最终校验依据。`
+      `Before generating a commit message, read the [Commit Message Guidelines](${relative}) and follow the specified format. Use the project's commitlint configuration as the final authority for validation. Write commit messages in Chinese.`
     )
   }
   console.log(`📝 提交规范：${convention}；已更新 ${files.length - 1} 个已有 AI 指令文件`)
